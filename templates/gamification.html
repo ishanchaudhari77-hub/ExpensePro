@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% block content %}
+<div
+    class="premium-page gamification-page"
+    data-rupy-context
+    data-rupy-page="gamification"
+    data-forecast-over="{{ 0 if monthly_remaining >= 0 else (monthly_remaining * -1) }}"
+    data-budget-remaining="{{ monthly_remaining }}"
+    data-rupy-img-idle="{{ url_for('static', filename='mascot/rupy/rupy_idle.png') }}"
+    data-rupy-img-thinking="{{ url_for('static', filename='mascot/rupy/rupy_thinking.png') }}"
+    data-rupy-img-warning="{{ url_for('static', filename='mascot/rupy/rupy_warning.png') }}"
+    data-rupy-img-error="{{ url_for('static', filename='mascot/rupy/rupy_error.png') }}"
+    data-rupy-img-celebrate="{{ url_for('static', filename='mascot/rupy/rupy_celebration.png') }}"
+    data-rupy-img-confused="{{ url_for('static', filename='mascot/rupy/rupy_confused.png') }}"
+    data-rupy-img-proud="{{ url_for('static', filename='mascot/rupy/rupy_proud.png') }}"
+>
+    <div class="header premium-header gamification-header">
+        <h1>Rupy Gamification Hub</h1>
+        <p>Level up your financial discipline with streaks, achievements, and daily challenges.</p>
+    </div>
+
+    <section
+        class="card gamification-hero-card"
+        data-rupy-signal
+        data-level-up="{{ 1 if gamification.level_up else 0 }}"
+        data-new-achievements="{{ gamification.new_achievements|length }}"
+        data-budget-warning="{{ 1 if monthly_budget > 0 and monthly_remaining < 0 else 0 }}"
+        data-monthly-budget="{{ monthly_budget }}"
+        data-monthly-spent-percent="{{ ((monthly_expense / monthly_budget) * 100) if monthly_budget > 0 else 0 }}"
+    >
+        <div class="gamification-hero-top">
+            <div>
+                <p class="gamification-kicker">Current Rank</p>
+                <h2>Level {{ gamification.level }} - {{ gamification.level_title }}</h2>
+                <p class="gamification-hero-copy">
+                    Total XP <strong>{{ gamification.total_xp }}</strong>
+                    {% if gamification.xp_gained_today > 0 %}
+                    | Today +{{ gamification.xp_gained_today }} XP
+                    {% endif %}
+                </p>
+            </div>
+            <a href="{{ url_for('dashboard') }}" class="scope-btn active">Back to Dashboard</a>
+        </div>
+
+        <p class="gamification-progress-copy">
+            XP in current level: <strong>{{ gamification.xp_in_level }}</strong> / {{ gamification.xp_needed }}
+        </p>
+        <div class="gamification-progress-track">
+            <div class="gamification-progress-fill" style="width: {{ gamification.xp_progress_percent|round(2) }}%;"></div>
+        </div>
+
+        <div class="gamification-hero-metrics">
+            <article>
+                <p>Current streak</p>
+                <strong>{{ gamification.streak_days }}</strong>
+            </article>
+            <article>
+                <p>Best streak</p>
+                <strong>{{ gamification.best_streak }}</strong>
+            </article>
+            <article>
+                <p>Unlocked badges</p>
+                <strong>{{ gamification.unlocked_achievements_count }} / {{ gamification.achievements|length }}</strong>
+            </article>
+            <article>
+                <p>This month records</p>
+                <strong>{{ monthly_records }}</strong>
+            </article>
+        </div>
+    </section>
+
+    <section class="card gamification-challenge-card">
+        <div class="gamification-section-head">
+            <h3>Daily Challenge</h3>
+            <span class="gamification-pill">Reward +{{ gamification.daily_challenge.reward_xp }} XP</span>
+        </div>
+        <p class="gamification-challenge-title">{{ gamification.daily_challenge.title }}</p>
+        <p class="gamification-challenge-desc">{{ gamification.daily_challenge.description }}</p>
+        <p class="gamification-challenge-progress">
+            Progress {{ gamification.daily_challenge.progress }} / {{ gamification.daily_challenge.target }}
+            {% if gamification.daily_challenge.is_complete %}
+            | Completed
+            {% endif %}
+        </p>
+        {% set challenge_progress = (gamification.daily_challenge.progress / gamification.daily_challenge.target * 100) if gamification.daily_challenge.target > 0 else 0 %}
+        <div class="gamification-mini-track">
+            <div class="gamification-mini-fill" style="width: {{ challenge_progress|round(2) }}%;"></div>
+        </div>
+    </section>
+
+    <section class="card gamification-achievements-block">
+        <div class="gamification-section-head">
+            <h3>Unlocked Achievements</h3>
+            <span>{{ unlocked_achievements|length }} earned</span>
+        </div>
+        {% if unlocked_achievements %}
+        <div class="gamification-achievement-grid">
+            {% for item in unlocked_achievements %}
+            <article class="achievement-chip is-unlocked">
+                <p>{{ item.title }}</p>
+                <small>{{ item.description }}</small>
+            </article>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="history-empty">No achievements unlocked yet. Start by adding your first expense.</p>
+        {% endif %}
+    </section>
+
+    <section class="card gamification-achievements-block">
+        <div class="gamification-section-head">
+            <h3>Locked Achievements</h3>
+            <span>{{ locked_achievements|length }} remaining</span>
+        </div>
+        {% if locked_achievements %}
+        <div class="gamification-achievement-grid">
+            {% for item in locked_achievements %}
+            <article class="achievement-chip">
+                <p>{{ item.title }}</p>
+                <small>{{ item.description }}</small>
+            </article>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="history-empty">All achievements unlocked. Rupy legend status reached.</p>
+        {% endif %}
+    </section>
+
+    <section class="card gamification-rules-card">
+        <div class="gamification-section-head">
+            <h3>XP Rules</h3>
+            <span>Level formula: XP needed = level * 100</span>
+        </div>
+        <div class="gamification-rules-table-wrap">
+            <table class="gamification-rules-table">
+                <thead>
+                    <tr>
+                        <th>Action</th>
+                        <th>XP</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in xp_rules %}
+                    <tr>
+                        <td>{{ row.action }}</td>
+                        <td>+{{ row.xp }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="card gamification-budget-summary">
+        <div class="gamification-section-head">
+            <h3>Month Health ({{ current_month_label }})</h3>
+            <span>{{ current_month }}</span>
+        </div>
+        <p>
+            Effective budget: <strong>&#8377; {{ monthly_budget|inr }}</strong>
+            | Spent: <strong>&#8377; {{ monthly_expense|inr }}</strong>
+            | Remaining:
+            <strong class="{{ 'text-negative' if monthly_remaining < 0 else 'text-positive' }}">
+                &#8377; {{ monthly_remaining|inr }}
+            </strong>
+        </p>
+    </section>
+</div>
+{% endblock %}

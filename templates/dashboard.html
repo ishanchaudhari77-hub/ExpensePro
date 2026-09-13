@@ -1,0 +1,1374 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="dashboard-page premium-page" data-dashboard-page data-rupy-context data-rupy-page="dashboard">
+
+<div class="header dashboard-header">
+    <div class="dashboard-topbar-left">
+        <button type="button" class="dashboard-menu-chip" data-sidebar-toggle aria-label="Toggle sidebar">
+            <i class="fa-solid fa-bars"></i>
+        </button>
+        <div class="dashboard-heading">
+            <h1>{{ t('dashboard.heading') }}</h1>
+            <p>{{ current_month_label }} {{ t('dashboard.overview') }}</p>
+        </div>
+    </div>
+
+    <div class="dashboard-topbar-right">
+        <form
+            action="{{ url_for('dashboard') }}"
+            method="GET"
+            class="dashboard-month-form"
+            data-month-filter
+            data-filter-target="#recent-expenses-card"
+        >
+            <input type="hidden" name="scope" value="{{ scope }}">
+            <select name="recent_month" aria-label="Select month">
+                <option value="{{ current_month }}" {% if recent_month == current_month %}selected{% endif %}>{{ current_month_label }}</option>
+                <option value="all" {% if recent_month == 'all' %}selected{% endif %}>All Months</option>
+                {% for option in recent_month_options %}
+                {% if option.value != current_month %}
+                <option value="{{ option.value }}" {% if recent_month == option.value %}selected{% endif %}>{{ option.label }}</option>
+                {% endif %}
+                {% endfor %}
+            </select>
+        </form>
+
+        <button type="button" class="dashboard-icon-btn" data-search-toggle aria-label="Search (Ctrl+K)">
+            <i class="fa-solid fa-magnifying-glass"></i>
+        </button>
+
+        <button type="button" class="dashboard-icon-btn has-dot {% if notification_unread_count > 0 %}has-unread{% endif %}" data-notification-toggle aria-label="Notifications">
+            <i class="fa-regular fa-bell"></i>
+            <span class="notification-dot" data-notification-count {% if notification_unread_count == 0 %}hidden{% endif %}>
+                {{ notification_unread_count if notification_unread_count < 100 else '99+' }}
+            </span>
+        </button>
+
+        <div class="dashboard-profile-wrap" data-profile-menu>
+            {% set profile_avatar_ui = avatar_style(current_avatar_preset) %}
+            {% set profile_avatar_initial = (current_user.name[:1] if current_user and current_user.name else 'P')|upper %}
+            {% set profile_avatar_image = current_avatar_image %}
+            <button
+                type="button"
+                class="dashboard-profile-trigger"
+                data-profile-toggle
+                aria-label="Open profile menu"
+                aria-expanded="false"
+            >
+                <span
+                    class="dashboard-profile-avatar {{ 'has-image' if profile_avatar_image else '' }}"
+                    style="
+                        --avatar-start: {{ profile_avatar_ui.start }};
+                        --avatar-end: {{ profile_avatar_ui.end }};
+                        --avatar-ring: {{ profile_avatar_ui.ring }};
+                    "
+                >
+                    {% if profile_avatar_image %}
+                    <img src="{{ url_for('static', filename=profile_avatar_image) }}" alt="{{ current_user.name if current_user else 'Profile' }}">
+                    {% else %}
+                    {{ profile_avatar_initial }}
+                    {% endif %}
+                </span>
+                <i class="fa-solid fa-chevron-down"></i>
+            </button>
+            <div class="dashboard-profile-dropdown" data-profile-dropdown role="menu" aria-label="Profile menu">
+                <div class="profile-dropdown-identity">
+                    <span
+                        class="profile-dropdown-avatar-mini {{ 'has-image' if profile_avatar_image else '' }}"
+                        style="
+                            --avatar-start: {{ profile_avatar_ui.start }};
+                            --avatar-end: {{ profile_avatar_ui.end }};
+                            --avatar-ring: {{ profile_avatar_ui.ring }};
+                        "
+                    >
+                        {% if profile_avatar_image %}
+                        <img src="{{ url_for('static', filename=profile_avatar_image) }}" alt="{{ current_user.name if current_user else 'Profile' }}">
+                        {% else %}
+                        {{ profile_avatar_initial }}
+                        {% endif %}
+                    </span>
+                    <div class="profile-dropdown-user">
+                        <p class="profile-dropdown-name">{{ current_user.name if current_user else 'Profile' }}</p>
+                        <p class="profile-dropdown-email" title="{{ current_user.email if current_user else '-' }}">
+                            {{ current_user.email if current_user else '-' }}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="profile-dropdown-divider"></div>
+
+                <div class="profile-dropdown-group">
+                    <p class="profile-dropdown-group-title">{{ t('profile.group_account') }}</p>
+                    <div class="profile-dropdown-actions">
+                        <a href="{{ url_for('account_page') }}" class="profile-dropdown-link" data-profile-item role="menuitem" tabindex="-1">
+                            <span class="profile-link-icon"><i class="fa-solid fa-id-badge"></i></span>
+                            <span>{{ t('profile.my_account') }}</span>
+                        </a>
+                        <a href="{{ url_for('expenses_page') }}" class="profile-dropdown-link" data-profile-item role="menuitem" tabindex="-1">
+                            <span class="profile-link-icon"><i class="fa-solid fa-wallet"></i></span>
+                            <span>{{ t('profile.manage_expenses') }}</span>
+                        </a>
+                        <a href="{{ url_for('reports_page') }}" class="profile-dropdown-link" data-profile-item role="menuitem" tabindex="-1">
+                            <span class="profile-link-icon"><i class="fa-solid fa-chart-pie"></i></span>
+                            <span>{{ t('profile.view_reports') }}</span>
+                        </a>
+                        <a href="{{ url_for('settings_page') }}" class="profile-dropdown-link" data-profile-item role="menuitem" tabindex="-1">
+                            <span class="profile-link-icon"><i class="fa-solid fa-sliders"></i></span>
+                            <span>{{ t('profile.app_settings') }}</span>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="profile-dropdown-divider profile-dropdown-divider-tight"></div>
+
+                <div class="profile-dropdown-group">
+                    <p class="profile-dropdown-group-title">{{ t('profile.quick_preferences') }}</p>
+                    <label class="profile-preference-field">
+                        <span>{{ t('profile.theme') }}</span>
+                        <select data-appearance-theme aria-label="Select theme">
+                            <option value="default" {% if app_theme == 'default' %}selected{% endif %}>{{ t('theme.default') }}</option>
+                            <option value="midnight" {% if app_theme == 'midnight' %}selected{% endif %}>{{ t('theme.midnight') }}</option>
+                            <option value="forest" {% if app_theme == 'forest' %}selected{% endif %}>{{ t('theme.forest') }}</option>
+                        </select>
+                    </label>
+                    <label class="profile-preference-field">
+                        <span>{{ t('profile.language') }}</span>
+                        <select data-appearance-language aria-label="Select language">
+                            <option value="en" {% if app_language == 'en' %}selected{% endif %}>{{ t('language.english') }}</option>
+                            <option value="hi" {% if app_language == 'hi' %}selected{% endif %}>{{ t('language.hindi') }}</option>
+                        </select>
+                    </label>
+                </div>
+
+                <div class="profile-dropdown-divider profile-dropdown-divider-tight"></div>
+
+                <form action="{{ url_for('logout') }}" method="POST" data-logout-form>
+                    <button type="submit" class="profile-dropdown-logout" data-profile-item role="menuitem" tabindex="-1">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                        <span>Logout</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="scope-toggle">
+    <a href="{{ url_for('dashboard', scope='this_month', recent_month=recent_month) }}" class="scope-btn {{ 'active' if scope == 'this_month' else '' }}">{{ t('scope.this_month') }}</a>
+    <a href="{{ url_for('dashboard', scope='all_time', recent_month=recent_month) }}" class="scope-btn {{ 'active' if scope == 'all_time' else '' }}">{{ t('scope.all_time') }}</a>
+    <a href="{{ url_for('gamification_page') }}" class="scope-xp-chip" title="Open gamification details">
+        <i class="fa-solid fa-trophy"></i>
+        <span>Lvl {{ gamification.level }}</span>
+        <small>{{ gamification.total_xp }} XP</small>
+    </a>
+</div>
+
+<div class="dashboard-info-strip">
+    <span class="dashboard-info-pill">
+        <i class="fa-solid fa-repeat"></i>
+        Rollover {{ "ON" if budget_rollover_enabled else "OFF" }}
+    </span>
+    <span class="dashboard-info-pill">
+        <i class="fa-solid fa-arrows-turn-right"></i>
+        Carry next: &#8377; {{ next_month_carry|inr }}
+    </span>
+    <span class="dashboard-info-pill">
+        <i class="fa-solid fa-wave-square"></i>
+        Alert threshold: {{ anomaly_preferences.threshold_percent|round(0)|int }}%
+    </span>
+    <a class="dashboard-info-pill pill-action" href="{{ url_for('settings_page') }}">
+        <i class="fa-solid fa-sliders"></i>
+        Tune alerts & budget
+    </a>
+    <a class="dashboard-info-pill" href="{{ url_for('goals_page') }}">
+        <i class="fa-solid fa-bullseye"></i>
+        Goals: {{ goals_overview.active_count }} active
+        {% if goals_overview.due_soon_count > 0 %}
+        | {{ goals_overview.due_soon_count }} due soon
+        {% endif %}
+    </a>
+</div>
+
+<section
+    class="rupy-dashboard-assistant"
+    data-rupy-dashboard
+    data-rupy-has-images="true"
+    data-rupy-img-idle="{{ url_for('static', filename='mascot/rupy/rupy_idle.png') }}"
+    data-rupy-img-thinking="{{ url_for('static', filename='mascot/rupy/rupy_thinking.png') }}"
+    data-rupy-img-warning="{{ url_for('static', filename='mascot/rupy/rupy_warning.png') }}"
+    data-rupy-img-error="{{ url_for('static', filename='mascot/rupy/rupy_error.png') }}"
+    data-rupy-img-celebrate="{{ url_for('static', filename='mascot/rupy/rupy_celebration.png') }}"
+                data-rupy-img-confused="{{ url_for('static', filename='mascot/rupy/rupy_confused.png') }}"
+                data-rupy-img-proud="{{ url_for('static', filename='mascot/rupy/rupy_proud.png') }}"
+    data-budget-left="{{ monthly_remaining }}"
+    data-total-budget="{{ monthly_budget }}"
+    data-total-spent="{{ monthly_expense }}"
+    data-spent-percent="{{ monthly_spent_percent }}"
+    data-current-month="{{ current_month }}"
+    data-user-name="{{ current_user.name if current_user and current_user.name else 'Friend' }}"
+    data-forecast-total="{{ monthly_forecast.projected_total }}"
+    data-forecast-over="{{ monthly_forecast.forecast_over_by }}"
+    data-forecast-confidence="{{ monthly_forecast.confidence }}"
+    data-rupy-initial-state="{{ rupy_coach.assistant_state }}"
+>
+    <div class="rupy-dashboard-avatar" aria-hidden="true">
+        <span class="rupy-dashboard-shadow"></span>
+        <img
+            class="rupy-dashboard-image"
+            data-rupy-dashboard-image
+            src="{{ url_for('static', filename='mascot/rupy/rupy_idle.png') }}"
+            alt=""
+            loading="lazy"
+            decoding="async"
+        >
+        <span class="rupy-dashboard-coin">
+            <span class="rupy-dashboard-eye rupy-eye-left"></span>
+            <span class="rupy-dashboard-eye rupy-eye-right"></span>
+            <span class="rupy-dashboard-mouth"></span>
+            <span class="rupy-dashboard-symbol">&#8377;</span>
+        </span>
+    </div>
+    <div class="rupy-dashboard-copy">
+        <p class="rupy-dashboard-label">Rupy Assistant</p>
+        <p class="rupy-dashboard-message" data-rupy-message>
+            {{ rupy_coach.primary_message }}
+        </p>
+    </div>
+    <button type="button" class="rupy-dashboard-tip-btn" data-rupy-tip-btn>
+        <i class="fa-solid fa-lightbulb"></i>
+        <span>Next tip</span>
+    </button>
+</section>
+
+<section class="rupy-weekly-report-card">
+    <div class="rupy-weekly-report-head">
+        <div>
+            <p class="rupy-weekly-kicker">Weekly Rupy Report</p>
+            <h3>{{ weekly_spending_summary.window_label }}</h3>
+        </div>
+        <span class="rupy-weekly-total">&#8377; {{ weekly_spending_summary.total|inr }}</span>
+    </div>
+    <div class="rupy-weekly-metrics">
+        <span><strong>{{ weekly_spending_summary.transactions }}</strong> transactions</span>
+        <span>Weekend spend: <strong>&#8377; {{ weekly_spending_summary.weekend_total|inr }}</strong></span>
+    </div>
+    {% if weekly_spending_summary.top_categories %}
+    <div class="rupy-weekly-topcats">
+        {% for item in weekly_spending_summary.top_categories %}
+        <span class="rupy-weekly-chip">
+            <strong>{{ item.category }}</strong>
+            &#8377; {{ item.amount|inr }} ({{ item.share_percent|round(0)|int }}%)
+        </span>
+        {% endfor %}
+    </div>
+    {% endif %}
+    <p class="rupy-weekly-reaction">{{ rupy_coach.weekly_summary.reaction }}</p>
+</section>
+
+<div
+    class="dashboard-rupy-signal"
+    data-rupy-signal
+    data-level-up="{{ 1 if gamification.level_up else 0 }}"
+    data-new-achievements="{{ gamification.new_achievements|length }}"
+    data-budget-warning="{{ 1 if monthly_spent_percent >= 90 else 0 }}"
+    data-monthly-budget="{{ monthly_budget }}"
+    data-monthly-spent-percent="{{ monthly_spent_percent }}"
+    data-goal-warning-count="{{ goals_overview.due_soon_count + goals_overview.overdue_count }}"
+    data-goal-overdue-count="{{ goals_overview.overdue_count }}"
+    data-goal-completed-today="{{ goals_overview.completed_today_count }}"
+    data-goal-focus-title="{{ goals_overview.next_focus_goal.title if goals_overview.next_focus_goal else '' }}"
+    data-goal-eta="{{ goals_overview.next_focus_goal.eta_copy if goals_overview.next_focus_goal else '' }}"
+    data-goal-recurring-resets="{{ goals_overview.recurring_resets }}"
+></div>
+<script id="rupy-coach-payload" type="application/json">{{ rupy_coach|tojson }}</script>
+
+<div class="dashboard-drawer-overlay" data-dashboard-overlay hidden></div>
+
+<aside class="dashboard-drawer notification-drawer" data-notification-drawer aria-hidden="true">
+    <div class="dashboard-drawer-header">
+        <h3>
+            Notifications
+            <span class="drawer-count-pill" data-notification-unread>{{ notification_unread_count }}</span>
+        </h3>
+        <button type="button" class="drawer-close-btn" data-drawer-close aria-label="Close notifications">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
+    <p class="dashboard-drawer-subtitle">
+        This week: {{ notification_counts.alerts }} budget alert{{ '' if notification_counts.alerts == 1 else 's' }},
+        {{ notification_counts.insights }} insight{{ '' if notification_counts.insights == 1 else 's' }},
+        {{ notification_counts.transactions }} transaction{{ '' if notification_counts.transactions == 1 else 's' }}.
+    </p>
+
+    <div class="drawer-tabs" data-notif-tabs>
+        <button type="button" class="drawer-tab active" data-notif-tab="all">All</button>
+        <button type="button" class="drawer-tab" data-notif-tab="alerts">Alerts</button>
+        <button type="button" class="drawer-tab" data-notif-tab="insights">Insights</button>
+        <button type="button" class="drawer-tab" data-notif-tab="transactions">Transactions</button>
+    </div>
+
+    <div class="notification-list" data-notif-list>
+        {% if dashboard_notifications %}
+            {% for item in dashboard_notifications %}
+            <article class="notification-item {{ 'is-read' if item.is_read else 'is-unread' }}" data-notif-item data-id="{{ item.id }}" data-group="{{ item.group }}">
+                <a class="notification-content" href="{{ item.url }}" data-notif-link>
+                    {% set notif_ui = notification_ui(item.group) %}
+                    <span class="notification-type-icon" style="--notif-color: {{ notif_ui.color }}">
+                        <i class="{{ notif_ui.icon }}"></i>
+                    </span>
+                    <span class="notification-copy">
+                        <p class="notification-title">{{ item.title }}</p>
+                        <p class="notification-message">{{ item.message }}</p>
+                        <p class="notification-time">{{ item.time }}</p>
+                    </span>
+                </a>
+                <button type="button" class="notification-read-btn" data-mark-read {% if item.is_read %}hidden{% endif %}>Mark as read</button>
+            </article>
+            {% endfor %}
+        {% else %}
+        <p class="drawer-empty-copy">No notifications yet.</p>
+        {% endif %}
+    </div>
+
+    <p class="drawer-empty-copy" data-notif-empty hidden>No notifications in this section.</p>
+
+    <div class="drawer-footer">
+        <button type="button" class="drawer-secondary-btn" data-mark-all-read>Mark all as read</button>
+    </div>
+</aside>
+
+<aside class="dashboard-drawer search-drawer" data-search-drawer aria-hidden="true">
+    <div class="dashboard-drawer-header">
+        <h3>Quick Search</h3>
+        <button type="button" class="drawer-close-btn" data-drawer-close aria-label="Close search">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
+
+    <div class="search-input-wrap">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input
+            type="text"
+            placeholder="Search merchant / category / date / amount..."
+            data-search-input
+            aria-label="Search transactions"
+        >
+    </div>
+
+    <div class="search-shortcuts">
+        <span>Shortcut</span>
+        <kbd>Ctrl</kbd>
+        <kbd>K</kbd>
+    </div>
+
+    <div class="search-recent-block">
+        <h4>Recent Searches</h4>
+        <div class="chip-row" data-recent-searches></div>
+    </div>
+
+    <div class="search-recent-block">
+        <h4>Suggested Searches</h4>
+        <div class="chip-row">
+            <button type="button" class="search-chip" data-search-query="food">Food</button>
+            <button type="button" class="search-chip" data-search-query="transport">Transport</button>
+            <button type="button" class="search-chip" data-search-query="shopping">Shopping</button>
+            <button type="button" class="search-chip" data-search-query="100">Amount 100</button>
+            <button type="button" class="search-chip" data-search-query="bills">Bills</button>
+        </div>
+    </div>
+
+    <div class="search-results-wrap">
+        <h4 data-search-results-title>Recent transactions</h4>
+        <p class="search-loading-copy" data-search-loading hidden>Searching...</p>
+        <p class="search-summary-copy" data-search-summary hidden></p>
+        <div class="search-results-list" data-search-results></div>
+        <p class="drawer-empty-copy" data-search-empty hidden>No matching transactions found.</p>
+        <button type="button" class="drawer-secondary-btn search-load-more" data-search-load-more hidden>Load more results</button>
+    </div>
+
+    <div class="drawer-footer">
+        <a href="{{ url_for('expenses_page') }}" class="drawer-link-btn">Open full transaction list</a>
+    </div>
+</aside>
+
+<div class="stats-group">
+    <h3 class="stats-heading">{{ 'This Month Summary (' ~ current_month ~ ')' if scope == 'this_month' else 'All Time Summary' }}</h3>
+    <div class="stats-grid">
+        <div class="stat-card stat-expense">
+            <span class="stat-card-icon"><i class="fa-solid fa-wallet"></i></span>
+            <h4>Total Expense</h4>
+            <p>&#8377; {{ total_expense|inr }}</p>
+            {% if scope == 'this_month' %}
+            <small class="stat-help">All-time: &#8377; {{ all_time_expense|inr }}</small>
+            {% else %}
+            <small class="stat-help">This month ({{ current_month }}): &#8377; {{ this_month_expense|inr }}</small>
+            {% endif %}
+        </div>
+        <div class="stat-card stat-income">
+            <span class="stat-card-icon"><i class="fa-solid fa-indian-rupee-sign"></i></span>
+            <h4>Total Income</h4>
+            <p>&#8377; {{ total_income|inr }}</p>
+            {% if scope == 'this_month' %}
+            <small class="stat-help">All-time: &#8377; {{ all_time_income|inr }}</small>
+            {% else %}
+            <small class="stat-help">This month ({{ current_month }}): &#8377; {{ this_month_income|inr }}</small>
+            {% endif %}
+        </div>
+        <div class="stat-card {{ 'stat-negative' if remaining_balance < 0 else 'stat-positive' }}">
+            <span class="stat-card-icon"><i class="fa-solid fa-scale-balanced"></i></span>
+            <h4>Remaining Balance</h4>
+            <p>&#8377; {{ remaining_balance|inr }}</p>
+            {% if scope == 'this_month' %}
+            <small class="stat-help">All-time net: &#8377; {{ all_time_remaining|inr }}</small>
+            {% else %}
+            <small class="stat-help">This month net ({{ current_month }}): &#8377; {{ this_month_remaining|inr }}</small>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="stats-group">
+    <h3 class="stats-heading">Budget Summary ({{ current_month }})</h3>
+    <div class="stats-grid">
+        <div class="stat-card stat-budget">
+            <span class="stat-card-icon"><i class="fa-solid fa-piggy-bank"></i></span>
+            <h4>Effective Budget</h4>
+            <p>&#8377; {{ monthly_budget|inr }}</p>
+            <small class="stat-help">
+                Base: &#8377; {{ monthly_base_budget|inr }} | Carry: &#8377; {{ monthly_carry_in|inr }}
+            </small>
+        </div>
+        <div class="stat-card stat-records">
+            <span class="stat-card-icon"><i class="fa-solid fa-receipt"></i></span>
+            <h4>Spent This Month</h4>
+            <p>&#8377; {{ monthly_expense|inr }}</p>
+            <small class="stat-help">Transaction count: {{ monthly_records }}</small>
+        </div>
+        <div class="stat-card {{ 'stat-negative' if monthly_remaining < 0 else 'stat-positive' }}">
+            <span class="stat-card-icon"><i class="fa-solid fa-bullseye"></i></span>
+            <h4>
+                {% if monthly_remaining < 0 %}
+                <i class="fa-solid fa-triangle-exclamation warning-icon"></i>
+                {% endif %}
+                Budget Left
+            </h4>
+            <p>&#8377; {{ monthly_remaining|inr }}</p>
+            <small class="stat-help">Carry to next month: &#8377; {{ next_month_carry|inr }}</small>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="budget-header">
+        <h3>Monthly Budget Status ({{ current_month }})</h3>
+        <span class="status-badge {{ 'status-negative' if budget_status_type == 'negative' else 'status-positive' }}">
+            {% if budget_status_type == 'negative' %}
+            <i class="fa-solid fa-triangle-exclamation warning-icon"></i>
+            {% endif %}
+            {{ budget_status_text }}
+        </span>
+    </div>
+    <p class="formula-note">
+        Formula: Effective Budget = Base Budget + Carry Forward, then Remaining = Effective Budget - Spent
+    </p>
+    <p>
+        Base: <strong>&#8377; {{ monthly_base_budget|inr }}</strong>
+        |
+        Carry In: <strong>&#8377; {{ monthly_carry_in|inr }}</strong>
+        |
+        Spent: <strong>&#8377; {{ monthly_expense|inr }}</strong>
+        |
+        Effective: <strong>&#8377; {{ monthly_budget|inr }}</strong>
+        |
+        Remaining: <strong class="{{ 'text-negative' if monthly_remaining < 0 else 'text-positive' }}">&#8377; {{ monthly_remaining|inr }}</strong>
+        |
+        Records: <strong>{{ monthly_records }}</strong>
+    </p>
+    <p class="progress-caption">
+        Rollover: <strong>{{ "ON" if budget_rollover_enabled else "OFF" }}</strong>
+        {% if budget_rollover_enabled %}
+        | Deficit carry: <strong>{{ "ON" if carry_forward_deficit else "OFF" }}</strong>
+        | Carry to next month: <strong>&#8377; {{ next_month_carry|inr }}</strong>
+        {% endif %}
+    </p>
+    <div class="progress-track">
+        <div
+            class="progress-fill {{ 'progress-over' if monthly_remaining < 0 else 'progress-ok' }}"
+            style="width: {{ monthly_spent_percent_display|round(2) }}%;"
+        ></div>
+    </div>
+    <p class="progress-caption">
+        {{ "%.1f"|format(monthly_spent_percent) }}% of budget used
+        {% if monthly_spent_percent > 100 %}
+            (over budget)
+        {% endif %}
+    </p>
+</div>
+
+<div class="card anomaly-card">
+    <div class="budget-header">
+        <h3>Smart Anomaly Alerts</h3>
+        <span class="status-badge {{ 'status-negative' if spending_anomaly.triggered else 'status-positive' }}">
+            {% if spending_anomaly.triggered %}
+            <i class="fa-solid fa-triangle-exclamation warning-icon"></i>
+            {% endif %}
+            {{ "Attention Needed" if spending_anomaly.triggered else "Normal Pattern" }}
+        </span>
+    </div>
+    <p class="formula-note">
+        Baseline: last {{ spending_anomaly.baseline_months_count }} month average
+        {% if spending_anomaly.baseline_month_labels %}
+        ({{ spending_anomaly.baseline_month_labels|join(", ") }})
+        {% endif %}
+        | Trigger: {{ spending_anomaly.threshold_percent|round(0)|int }}% and min &#8377; {{ spending_anomaly.min_amount_delta|inr }}
+    </p>
+
+    {% if spending_anomaly.overall %}
+    <p class="anomaly-lead">
+        Spending is <strong>{{ spending_anomaly.overall.percent|round(0)|int }}%</strong> above usual in {{ current_month_label }}.
+        Current: <strong>&#8377; {{ spending_anomaly.overall.current_total|inr }}</strong> |
+        Baseline Avg: <strong>&#8377; {{ spending_anomaly.overall.baseline_average|inr }}</strong>
+    </p>
+    {% else %}
+    <p class="anomaly-lead">
+        Overall monthly spend is within expected range.
+        Current: <strong>&#8377; {{ spending_anomaly.current_total|inr }}</strong> |
+        Baseline Avg: <strong>&#8377; {{ spending_anomaly.baseline_average|inr }}</strong>
+    </p>
+    {% endif %}
+
+    {% if spending_anomaly.categories %}
+    <div class="anomaly-list">
+        {% for item in spending_anomaly.categories %}
+        <div class="anomaly-item">
+            <p>
+                <strong>{{ item.category }}</strong>:
+                spending is <strong>{{ item.percent|round(0)|int }}%</strong> above usual
+            </p>
+            <small>
+                Current &#8377; {{ item.current_total|inr }} | Baseline &#8377; {{ item.baseline_average|inr }}
+            </small>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="history-empty">No category-level anomalies detected.</p>
+    {% endif %}
+</div>
+
+<div class="card" id="recent-expenses-card">
+    <div class="history-header">
+        <h3>Recent Expenses</h3>
+        <form
+            action="{{ url_for('dashboard') }}"
+            method="GET"
+            class="history-filter-form"
+            data-month-filter
+            data-filter-target="#recent-expenses-card"
+        >
+            <input type="hidden" name="scope" value="{{ scope }}">
+            <label for="recent-month-filter">Month</label>
+            <select id="recent-month-filter" name="recent_month">
+                <option value="{{ current_month }}" {% if recent_month == current_month %}selected{% endif %}>{{ current_month_label }}</option>
+                <option value="all" {% if recent_month == 'all' %}selected{% endif %}>All Months</option>
+                {% for option in recent_month_options %}
+                {% if option.value != current_month %}
+                <option value="{{ option.value }}" {% if recent_month == option.value %}selected{% endif %}>{{ option.label }}</option>
+                {% endif %}
+                {% endfor %}
+            </select>
+        </form>
+    </div>
+
+    {% if recent_expense_groups %}
+        {% for group in recent_expense_groups %}
+        <div class="month-group">
+            <div class="month-group-header">
+                <h4>{{ group.month_label }}</h4>
+                <p>{{ group.count }} record{{ '' if group.count == 1 else 's' }} | Total: &#8377; {{ group.total|inr }}</p>
+            </div>
+            <table>
+                <tr>
+                    <th>Amount</th>
+                    <th class="category-col-header">Category</th>
+                    <th>Description</th>
+                    <th>Date</th>
+                    <th>Time</th>
+                    <th>Action</th>
+                </tr>
+                {% for expense in group.records %}
+                <tr>
+                    <td>&#8377; {{ expense.amount|inr }}</td>
+                    <td class="category-col-cell">
+                        {% set cat_ui = category_ui(expense.category) %}
+                        <span class="category-pill">
+                            <span class="category-badge" style="--category-color: {{ cat_ui.color }}">
+                                <i class="{{ cat_ui.icon }}"></i>
+                            </span>
+                            <span>{{ expense.category }}</span>
+                        </span>
+                    </td>
+                    <td>{{ expense.description }}</td>
+                    <td>{{ expense.date_display }}</td>
+                    <td>{{ expense.history }}</td>
+                    <td>
+                        <a class="btn-edit" href="/edit/{{ expense._id }}">Edit</a>
+                        <form
+                            action="/delete/{{ expense._id }}"
+                            method="POST"
+                            class="inline-form"
+                            data-confirm-form
+                            data-confirm-title="Delete Expense?"
+                            data-confirm-message="This expense entry will be removed permanently."
+                        >
+                            <button class="btn-delete" type="submit">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+        {% endfor %}
+    {% else %}
+    <p class="history-empty">No recent expenses for the selected month.</p>
+    {% endif %}
+</div>
+
+<div class="card expense-trend-card" data-expense-trend-card>
+    <div class="expense-trend-header">
+        <div class="expense-trend-copy">
+            <h3 data-trend-title>Last 7 Days Expenses</h3>
+            <p>Category-wise spending view with smart comparison and insights.</p>
+        </div>
+        <div class="expense-trend-range" data-trend-range-switch>
+            <button type="button" class="expense-trend-range-btn active" data-range-key="7d">7D</button>
+            <button type="button" class="expense-trend-range-btn" data-range-key="30d">30D</button>
+            <button type="button" class="expense-trend-range-btn" data-range-key="3m">3M</button>
+        </div>
+    </div>
+
+    <div class="expense-trend-filter-row">
+        <div class="expense-trend-chip-list" data-trend-chip-list></div>
+        <p class="expense-trend-total-copy">
+            Total (<span data-trend-window-label>Last 7 Days</span>): <strong data-trend-total-inline>&#8377; 0.00</strong>
+        </p>
+    </div>
+
+    <div class="expense-trend-canvas-wrap">
+        <canvas id="weeklyChart"></canvas>
+    </div>
+
+    <div class="expense-trend-footer-row">
+        <p>
+            Total: <strong data-trend-footer-total>&#8377; 0.00</strong>
+            <span class="expense-trend-change is-flat" data-trend-footer-change> | -- vs previous window</span>
+        </p>
+        <p>Average: <strong data-trend-average-inline>&#8377; 0.00</strong> / day</p>
+    </div>
+
+    <div class="expense-trend-insight-box">
+        <i class="fa-solid fa-lightbulb"></i>
+        <p data-trend-insight>
+            Insight: Add more transactions to unlock spending patterns.
+        </p>
+    </div>
+
+    <div class="expense-trend-legend" data-trend-legend></div>
+</div>
+
+<section
+    class="card rupy-meme-card"
+    data-rupy-meme-generator
+    data-rupy-meme-expressions='{{ rupy_meme_expressions|tojson }}'
+    data-rupy-meme-img-idle="{{ url_for('static', filename='mascot/rupy/rupy_idle.png') }}"
+    data-rupy-meme-img-warning="{{ url_for('static', filename='mascot/rupy/rupy_warning.png') }}"
+    data-rupy-meme-img-happy="{{ url_for('static', filename='mascot/rupy/rupy_happy.png') }}"
+    data-rupy-meme-img-thinking="{{ url_for('static', filename='mascot/rupy/rupy_analyzing_chart.png') }}"
+    data-rupy-meme-img-lazy="{{ url_for('static', filename='mascot/rupy/rupy_lazy_rich.png') }}"
+    data-rupy-meme-img-broke="{{ url_for('static', filename='mascot/rupy/rupy_broke.png') }}"
+>
+    <div class="rupy-meme-header">
+        <div>
+            <p class="rupy-meme-kicker">Rupy Meme Generator</p>
+            <h3>Create shareable finance memes</h3>
+        </div>
+        <p class="rupy-meme-status" data-rupy-meme-status>Ready to generate.</p>
+    </div>
+
+    <div class="rupy-meme-controls">
+        <label>
+            <span>Upload expense screenshot</span>
+            <input type="file" accept="image/*" data-rupy-meme-upload>
+        </label>
+        <label>
+            <span>Template</span>
+            <select data-rupy-meme-template>
+                <option value="Bro... you spent this much?">Bro... you spent this much?</option>
+                <option value="Budget left the chat.">Budget left the chat.</option>
+                <option value="Rupy is disappointed.">Rupy is disappointed.</option>
+                <option value="Smart spending unlocked.">Smart spending unlocked.</option>
+                <option value="Coffee Addict: daily coffee budget gone.">Coffee Addict</option>
+                <option value="Shopping Monster activated. Cart wins again.">Shopping Monster</option>
+                <option value="Rich Mode ON. Salary drop looks legendary.">Rich Mode</option>
+                <option value="Broke Mode: wallet says try again next month.">Broke Mode</option>
+                <option value="Budget Ninja: silent savings, loud results.">Budget Ninja</option>
+            </select>
+        </label>
+        <label>
+            <span>Rupy expression</span>
+            <select data-rupy-meme-expression>
+                {% set meme_ns = namespace(default_expression='') %}
+                {% for expression in rupy_meme_expressions %}
+                    {% if expression.key == 'warning' %}
+                        {% set meme_ns.default_expression = 'warning' %}
+                    {% endif %}
+                {% endfor %}
+                {% if not meme_ns.default_expression and rupy_meme_expressions %}
+                    {% set meme_ns.default_expression = rupy_meme_expressions[0].key %}
+                {% endif %}
+                {% if rupy_meme_expressions %}
+                    {% for expression in rupy_meme_expressions %}
+                    <option value="{{ expression.key }}" {% if expression.key == meme_ns.default_expression %}selected{% endif %}>{{ expression.label }}</option>
+                    {% endfor %}
+                {% else %}
+                    <option value="idle">Idle</option>
+                {% endif %}
+            </select>
+        </label>
+        <label>
+            <span>Custom caption</span>
+            <input type="text" placeholder="Optional custom caption" data-rupy-meme-custom>
+        </label>
+    </div>
+
+    <div class="rupy-meme-actions">
+        <button type="button" class="rupy-meme-btn" data-rupy-meme-render>Generate Meme</button>
+        <button type="button" class="rupy-meme-btn is-secondary" data-rupy-meme-download>Download PNG</button>
+        <button type="button" class="rupy-meme-btn is-secondary" data-rupy-meme-share>Share Meme</button>
+    </div>
+
+    <div class="rupy-meme-canvas-wrap">
+        <canvas width="860" height="860" data-rupy-meme-canvas></canvas>
+    </div>
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='expense-core.js') }}"></script>
+<script>
+const expenseSeries = {{ expense_chart_series|tojson }};
+const chartCategoryUiMap = {{ chart_category_ui_map|tojson }};
+const defaultCategoryUi = {{ default_category_ui|tojson }};
+const localeCode = {{ ('hi-IN' if app_language == 'hi' else 'en-IN')|tojson }};
+const chartCanvas = document.getElementById("weeklyChart");
+const chartWrap = chartCanvas ? chartCanvas.closest(".expense-trend-canvas-wrap") : null;
+const rangeButtons = Array.from(document.querySelectorAll("[data-range-key]"));
+const trendTitleNode = document.querySelector("[data-trend-title]");
+const trendWindowLabelNode = document.querySelector("[data-trend-window-label]");
+const trendTotalInlineNode = document.querySelector("[data-trend-total-inline]");
+const trendFooterTotalNode = document.querySelector("[data-trend-footer-total]");
+const trendAverageInlineNode = document.querySelector("[data-trend-average-inline]");
+const trendFooterChangeNode = document.querySelector("[data-trend-footer-change]");
+const trendInsightNode = document.querySelector("[data-trend-insight]");
+const trendChipListNode = document.querySelector("[data-trend-chip-list]");
+const trendLegendNode = document.querySelector("[data-trend-legend]");
+
+if (chartCanvas && window.Chart) {
+    const ctx = chartCanvas.getContext("2d");
+    const fullInrFormatter = new Intl.NumberFormat(localeCode, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    });
+    const compactInrFormatter = new Intl.NumberFormat(localeCode, {
+        notation: "compact",
+        maximumFractionDigits: 1,
+    });
+    const dateShortFormatter = new Intl.DateTimeFormat(localeCode, {
+        day: "2-digit",
+        month: "short",
+    });
+    const weekdayFormatter = new Intl.DateTimeFormat(localeCode, {
+        weekday: "short",
+    });
+
+    const toNumberArray = (value) => (
+        Array.isArray(value)
+            ? value.map((item) => Number(item) || 0)
+            : []
+    );
+
+    const parseDateValue = (dateValue) => {
+        if (!dateValue) return null;
+        const parsed = new Date(`${dateValue}T00:00:00`);
+        return Number.isNaN(parsed.getTime()) ? null : parsed;
+    };
+
+    const formatShortDate = (dateValue) => {
+        const parsed = parseDateValue(dateValue);
+        if (!parsed) return String(dateValue || "-");
+        return dateShortFormatter.format(parsed);
+    };
+
+    const formatAxisDate = (dateValue, rangeKey) => {
+        const parsed = parseDateValue(dateValue);
+        if (!parsed) return String(dateValue || "-");
+        return rangeKey === "7d" ? weekdayFormatter.format(parsed) : dateShortFormatter.format(parsed);
+    };
+
+    const formatInr = (value) => `\u20b9${fullInrFormatter.format(Number(value) || 0)}`;
+    const formatInrCompact = (value) => `\u20b9${compactInrFormatter.format(Number(value) || 0)}`;
+    const rangeLabelMap = {
+        "7d": "Last 7 Days",
+        "30d": "Last 30 Days",
+        "3m": "Last 3 Months",
+    };
+    const hexPattern = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
+    const chartRangeCache = {};
+
+    const chartHeightByRange = {
+        desktop: { "7d": 370, "30d": 382, "3m": 394 },
+        mobile: { "7d": 286, "30d": 300, "3m": 314 },
+    };
+
+    const setChartHeight = (rangeKey) => {
+        if (!chartWrap) return;
+        const isMobile = window.matchMedia("(max-width: 768px)").matches;
+        const group = isMobile ? chartHeightByRange.mobile : chartHeightByRange.desktop;
+        chartWrap.style.height = `${group[rangeKey] || group["7d"]}px`;
+    };
+
+    const clampValue = (value, min, max) => Math.min(max, Math.max(min, value));
+
+    const categoryKeyFromLabel = (labelValue) => (
+        String(labelValue || "Other")
+            .trim()
+            .replace(/\s+/g, " ")
+            .toLowerCase()
+    );
+
+    const toReadableCategory = (labelValue) => {
+        const raw = String(labelValue || "Other").trim().replace(/\s+/g, " ");
+        if (!raw) return "Other";
+        return raw
+            .split(" ")
+            .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+            .join(" ");
+    };
+
+    const categoryUi = (categoryName) => {
+        const key = categoryKeyFromLabel(categoryName);
+        const ui = chartCategoryUiMap[key] || defaultCategoryUi || {};
+        const color = String(ui.color || "#7a93ad");
+        return {
+            color: hexPattern.test(color) ? color : "#7a93ad",
+            icon: String(ui.icon || "fa-solid fa-shapes"),
+        };
+    };
+
+    const hexToRgba = (hexValue, alpha = 1) => {
+        if (!hexPattern.test(hexValue)) return `rgba(122, 147, 173, ${alpha})`;
+        let hex = hexValue.replace("#", "");
+        if (hex.length === 3) {
+            hex = hex.split("").map((item) => item + item).join("");
+        }
+        const value = Number.parseInt(hex, 16);
+        const red = (value >> 16) & 255;
+        const green = (value >> 8) & 255;
+        const blue = value & 255;
+        return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+    };
+
+    const windowLabelForRange = (rangeKey) => rangeLabelMap[rangeKey] || rangeLabelMap["7d"];
+
+    const getRangeData = (rangeKey) => {
+        if (chartRangeCache[rangeKey]) {
+            return chartRangeCache[rangeKey];
+        }
+
+        const fallbackRaw = expenseSeries["7d"] || {};
+        const raw = expenseSeries[rangeKey] || fallbackRaw;
+        const dates = Array.isArray(raw.dates) ? raw.dates : [];
+        const totals = toNumberArray(raw.totals);
+        const txnCounts = toNumberArray(raw.txn_counts);
+        const rawBreakdowns = Array.isArray(raw.category_breakdown) ? raw.category_breakdown : [];
+
+        const labelsByKey = {};
+        const dailyCategoryByKey = [];
+        const categoryTotalsByKey = {};
+
+        dates.forEach((_, index) => {
+            const dayRaw = rawBreakdowns[index];
+            const normalizedDay = {};
+            if (dayRaw && typeof dayRaw === "object") {
+                Object.entries(dayRaw).forEach(([rawName, rawAmount]) => {
+                    const safeAmount = Number(rawAmount) || 0;
+                    if (safeAmount <= 0) return;
+                    const key = categoryKeyFromLabel(rawName);
+                    if (!key) return;
+                    if (!labelsByKey[key]) {
+                        labelsByKey[key] = toReadableCategory(rawName);
+                    }
+                    normalizedDay[key] = (normalizedDay[key] || 0) + safeAmount;
+                    categoryTotalsByKey[key] = (categoryTotalsByKey[key] || 0) + safeAmount;
+                });
+            }
+            dailyCategoryByKey.push(normalizedDay);
+        });
+
+        const sortedCategoryKeys = Object.keys(categoryTotalsByKey)
+            .sort((leftKey, rightKey) => (categoryTotalsByKey[rightKey] || 0) - (categoryTotalsByKey[leftKey] || 0));
+
+        const result = {
+            rangeKey,
+            dates,
+            totals,
+            txnCounts,
+            labelsByKey,
+            dailyCategoryByKey,
+            categoryTotalsByKey,
+            sortedCategoryKeys,
+            overallTotal: totals.reduce((acc, item) => acc + (Number(item) || 0), 0),
+        };
+
+        chartRangeCache[rangeKey] = result;
+        return result;
+    };
+
+    const getWindowSum = window.ExpenseProCore.getWindowSum;
+
+    const compareWithPreviousWindow = (currentModel, categoryKey) => {
+        const sourceModel = getRangeData("3m");
+        const currentDates = currentModel?.dates || [];
+        if (!currentDates.length || !sourceModel.dates.length) {
+            return null;
+        }
+        const windowSize = currentDates.length;
+        const firstDate = currentDates[0];
+        const firstIndex = sourceModel.dates.indexOf(firstDate);
+        if (firstIndex < 0) return null;
+        const previousStart = firstIndex - windowSize;
+        if (previousStart < 0) return null;
+        const currentTotal = getWindowSum(sourceModel, firstIndex, windowSize, categoryKey);
+        const previousTotal = getWindowSum(sourceModel, previousStart, windowSize, categoryKey);
+        if (previousTotal <= 0) {
+            return {
+                percent: null,
+                label: "No previous spend data",
+            };
+        }
+        const percent = ((currentTotal - previousTotal) / previousTotal) * 100.0;
+        return {
+            percent,
+            label: "vs previous window",
+        };
+    };
+
+    const buildCategorySeries = (model, categoryKey) => {
+        const values = categoryKey === "all"
+            ? model.totals.map((item) => Number(item) || 0)
+            : model.dailyCategoryByKey.map((dayMap) => Number(dayMap[categoryKey] || 0));
+        const dominantKeys = model.dailyCategoryByKey.map((dayMap) => {
+            const entries = Object.entries(dayMap || {});
+            if (!entries.length) return "";
+            return entries.sort((left, right) => (Number(right[1]) || 0) - (Number(left[1]) || 0))[0][0];
+        });
+        return {
+            values,
+            dominantKeys,
+        };
+    };
+
+    const makeBarColor = (baseHex, value, avgValue, maxValue) => {
+        const safeValue = Number(value) || 0;
+        if (safeValue <= 0) {
+            return "rgba(148, 163, 184, 0.30)";
+        }
+        const relativeToMax = maxValue > 0 ? (safeValue / maxValue) : 0;
+        const relativeToAvg = avgValue > 0 ? (safeValue / avgValue) : 1;
+        const alpha = clampValue(0.62 + (relativeToMax * 0.32), 0.58, 0.95);
+        let color = hexToRgba(baseHex, alpha);
+        if (relativeToAvg >= 1.45) {
+            color = hexToRgba(baseHex, 0.98);
+        }
+        return color;
+    };
+
+    let activeRangeKey = "7d";
+    let activeCategoryKey = "all";
+    let activeMeta = {
+        rangeKey: "7d",
+        categoryKey: "all",
+        dates: [],
+        totals: [],
+        txnCounts: [],
+        values: [],
+        labelsByKey: {},
+        dailyCategoryByKey: [],
+        dominantKeys: [],
+        selectedCategoryLabel: "All",
+        overallTotals: [],
+        showValueLabels: true,
+        averageValue: 0,
+    };
+
+    const valueLabelPlugin = {
+        id: "expenseValueLabels",
+        afterDatasetsDraw(currentChart) {
+            if (!activeMeta.showValueLabels) return;
+            const dataset = currentChart.data.datasets?.[0];
+            const meta = currentChart.getDatasetMeta(0);
+            if (!dataset || !meta?.data?.length) return;
+            const chartContext = currentChart.ctx;
+            chartContext.save();
+            chartContext.font = "700 12px 'Segoe UI', sans-serif";
+            chartContext.fillStyle = "#1f2a44";
+            chartContext.textAlign = "center";
+            chartContext.textBaseline = "bottom";
+
+            meta.data.forEach((barElement, index) => {
+                const value = Number(dataset.data?.[index] || 0);
+                if (value <= 0) return;
+                const formattedValue = formatInrCompact(value);
+                chartContext.fillText(formattedValue, barElement.x, barElement.y - 6);
+            });
+            chartContext.restore();
+        },
+    };
+
+    const chart = new Chart(ctx, {
+        type: "bar",
+        data: {
+            labels: [],
+            datasets: [
+                {
+                    type: "bar",
+                    label: "Spending",
+                    data: [],
+                    backgroundColor: [],
+                    borderColor: [],
+                    borderWidth: 1,
+                    borderRadius: 10,
+                    maxBarThickness: 48,
+                    minBarLength: 2,
+                    categoryPercentage: 0.74,
+                    barPercentage: 0.86,
+                    borderSkipped: false,
+                },
+            ],
+        },
+        plugins: [valueLabelPlugin],
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: {
+                padding: {
+                    top: 4,
+                    right: 4,
+                    bottom: 22,
+                    left: 2,
+                },
+            },
+            interaction: {
+                mode: "index",
+                intersect: false,
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    padding: 11,
+                    callbacks: {
+                        title(contexts) {
+                            const index = Number(contexts?.[0]?.dataIndex ?? -1);
+                            const dateValue = activeMeta.dates[index] || "";
+                            return formatShortDate(dateValue);
+                        },
+                        label(context) {
+                            if (context.datasetIndex !== 0) return null;
+                            const amount = Number(context.parsed.y || 0);
+                            const label = activeMeta.categoryKey === "all"
+                                ? "Total"
+                                : activeMeta.selectedCategoryLabel;
+                            return `${label}: ${formatInr(amount)}`;
+                        },
+                        afterBody(contexts) {
+                            const index = Number(contexts?.[0]?.dataIndex ?? -1);
+                            const txCount = Number(activeMeta.txnCounts[index] || 0);
+                            const dayData = activeMeta.dailyCategoryByKey[index] || {};
+                            const totalForDay = Number(activeMeta.overallTotals[index] || 0);
+                            const details = [`Transactions: ${txCount}`];
+                            if (activeMeta.categoryKey === "all") {
+                                const topCategoryEntries = Object.entries(dayData)
+                                    .sort((left, right) => (Number(right[1]) || 0) - (Number(left[1]) || 0))
+                                    .slice(0, 3)
+                                    .map(([key, amount]) => `${activeMeta.labelsByKey[key] || "Other"}: ${formatInr(amount)}`);
+                                if (topCategoryEntries.length) {
+                                    details.push("Breakdown:");
+                                    details.push(...topCategoryEntries);
+                                } else {
+                                    details.push("No spend recorded.");
+                                }
+                            } else {
+                                details.push(`Day total: ${formatInr(totalForDay)}`);
+                            }
+                            return details;
+                        },
+                    },
+                },
+            },
+            scales: {
+                x: {
+                    grid: {
+                        display: false,
+                    },
+                    ticks: {
+                        color: "#64748b",
+                        maxRotation: 0,
+                        autoSkip: true,
+                        maxTicksLimit: 10,
+                        padding: 14,
+                    },
+                },
+                y: {
+                    beginAtZero: true,
+                    grace: "12%",
+                    grid: {
+                        color: "rgba(148, 163, 184, 0.22)",
+                    },
+                    ticks: {
+                        color: "#64748b",
+                        maxTicksLimit: 6,
+                        padding: 8,
+                        callback(value) {
+                            return formatInrCompact(Number(value) || 0);
+                        },
+                    },
+                },
+            },
+        },
+    });
+
+    const renderTrendChips = (model, selectedKey) => {
+        if (!trendChipListNode) return;
+        const sortedKeys = model.sortedCategoryKeys.slice(0, 7);
+        const fragment = document.createDocumentFragment();
+        const allButton = document.createElement("button");
+        allButton.type = "button";
+        allButton.className = `expense-trend-chip ${selectedKey === "all" ? "active" : ""}`;
+        allButton.dataset.categoryKey = "all";
+        allButton.innerHTML = `
+            <span class="expense-trend-chip-dot" style="--trend-dot-color: #2563eb;"></span>
+            <span>All</span>
+            <strong>${formatInr(model.overallTotal)}</strong>
+        `;
+        fragment.appendChild(allButton);
+
+        sortedKeys.forEach((key) => {
+            const categoryLabel = model.labelsByKey[key] || "Other";
+            const categoryTotal = Number(model.categoryTotalsByKey[key] || 0);
+            const ui = categoryUi(categoryLabel);
+            const chipButton = document.createElement("button");
+            chipButton.type = "button";
+            chipButton.className = `expense-trend-chip ${selectedKey === key ? "active" : ""}`;
+            chipButton.dataset.categoryKey = key;
+            chipButton.innerHTML = `
+                <span class="expense-trend-chip-dot" style="--trend-dot-color: ${ui.color};"></span>
+                <span>${categoryLabel}</span>
+                <strong>${formatInrCompact(categoryTotal)}</strong>
+            `;
+            fragment.appendChild(chipButton);
+        });
+
+        trendChipListNode.innerHTML = "";
+        trendChipListNode.appendChild(fragment);
+    };
+
+    const renderLegend = (model) => {
+        if (!trendLegendNode) return;
+        const keys = model.sortedCategoryKeys.slice(0, 7);
+        if (!keys.length) {
+            trendLegendNode.innerHTML = "";
+            return;
+        }
+        const legendMarkup = keys.map((key) => {
+            const label = model.labelsByKey[key] || "Other";
+            const ui = categoryUi(label);
+            return `
+                <span class="expense-trend-legend-item">
+                    <span class="expense-trend-legend-dot" style="--trend-dot-color: ${ui.color};"></span>
+                    <span>${label}</span>
+                </span>
+            `;
+        }).join("");
+        trendLegendNode.innerHTML = legendMarkup;
+    };
+
+    const updateHeaderAndFooter = (model, categoryKey, values) => {
+        const rangeLabel = windowLabelForRange(model.rangeKey);
+        const total = values.reduce((acc, item) => acc + item, 0);
+        const average = values.length ? (total / values.length) : 0;
+        const compareMeta = compareWithPreviousWindow(model, categoryKey);
+        const selectedLabel = categoryKey === "all"
+            ? "All Categories"
+            : (model.labelsByKey[categoryKey] || "Category");
+
+        if (trendTitleNode) {
+            trendTitleNode.textContent = `${rangeLabel} Expenses`;
+        }
+        if (trendWindowLabelNode) {
+            trendWindowLabelNode.textContent = rangeLabel;
+        }
+        if (trendTotalInlineNode) {
+            trendTotalInlineNode.textContent = formatInr(total);
+        }
+        if (trendFooterTotalNode) {
+            trendFooterTotalNode.textContent = formatInr(total);
+        }
+        if (trendAverageInlineNode) {
+            trendAverageInlineNode.textContent = formatInr(average);
+        }
+
+        if (trendFooterChangeNode) {
+            trendFooterChangeNode.classList.remove("is-up", "is-down", "is-flat");
+            if (!compareMeta || compareMeta.percent === null) {
+                trendFooterChangeNode.classList.add("is-flat");
+                trendFooterChangeNode.textContent = " | -- vs previous window";
+            } else {
+                const percent = Number(compareMeta.percent || 0);
+                const sign = percent >= 0 ? "+" : "";
+                trendFooterChangeNode.textContent = ` | ${sign}${percent.toFixed(0)}% vs previous window`;
+                if (Math.abs(percent) < 2) {
+                    trendFooterChangeNode.classList.add("is-flat");
+                } else if (percent > 0) {
+                    trendFooterChangeNode.classList.add("is-up");
+                } else {
+                    trendFooterChangeNode.classList.add("is-down");
+                }
+            }
+        }
+
+        if (trendInsightNode) {
+            if (total <= 0) {
+                trendInsightNode.textContent = "Insight: Add transactions to unlock clear spending patterns.";
+                return;
+            }
+            const peakValue = values.length ? Math.max(...values) : 0;
+            const peakIndex = values.indexOf(peakValue);
+            const peakDate = peakIndex >= 0 ? model.dates[peakIndex] : "";
+            const peakDateLabel = peakDate ? formatShortDate(peakDate) : "-";
+            if (categoryKey === "all") {
+                const peakCategories = model.dailyCategoryByKey[peakIndex] || {};
+                const peakEntries = Object.entries(peakCategories)
+                    .sort((left, right) => (Number(right[1]) || 0) - (Number(left[1]) || 0));
+                const dominantCategory = peakEntries.length
+                    ? (model.labelsByKey[peakEntries[0][0]] || "Other")
+                    : "No category";
+                trendInsightNode.textContent = `Insight: Peak spend was ${formatInr(peakValue)} on ${peakDateLabel}, mostly in ${dominantCategory}.`;
+            } else {
+                trendInsightNode.textContent = `Insight: ${selectedLabel} peaked at ${formatInr(peakValue)} on ${peakDateLabel}.`;
+            }
+        }
+    };
+
+    const renderCurrentSelection = () => {
+        const model = getRangeData(activeRangeKey);
+        if (activeCategoryKey !== "all" && !(activeCategoryKey in model.categoryTotalsByKey)) {
+            activeCategoryKey = "all";
+        }
+        renderTrendChips(model, activeCategoryKey);
+        renderLegend(model);
+
+        const series = buildCategorySeries(model, activeCategoryKey);
+        const labels = model.dates.map((dateValue) => formatAxisDate(dateValue, activeRangeKey));
+        const averageValue = series.values.length
+            ? (series.values.reduce((acc, item) => acc + item, 0) / series.values.length)
+            : 0;
+        const maxValue = series.values.length ? Math.max(...series.values) : 0;
+        const bars = series.values.map((value, index) => {
+            if (activeCategoryKey === "all") {
+                const dominantKey = series.dominantKeys[index];
+                if (!dominantKey) {
+                    return makeBarColor("#7a93ad", value, averageValue, maxValue);
+                }
+                const dominantLabel = model.labelsByKey[dominantKey] || "Other";
+                const ui = categoryUi(dominantLabel);
+                return makeBarColor(ui.color, value, averageValue, maxValue);
+            }
+            const categoryLabel = model.labelsByKey[activeCategoryKey] || "Other";
+            const ui = categoryUi(categoryLabel);
+            return makeBarColor(ui.color, value, averageValue, maxValue);
+        });
+        const borderColors = bars.map((colorValue) => {
+            if (colorValue.startsWith("rgba(")) {
+                return colorValue.replace(/,(\s*\d*\.?\d+)\)/, ", 1)");
+            }
+            return colorValue;
+        });
+
+        activeMeta = {
+            rangeKey: activeRangeKey,
+            categoryKey: activeCategoryKey,
+            dates: model.dates,
+            totals: model.totals,
+            txnCounts: model.txnCounts,
+            values: series.values,
+            labelsByKey: model.labelsByKey,
+            dailyCategoryByKey: model.dailyCategoryByKey,
+            dominantKeys: series.dominantKeys,
+            selectedCategoryLabel: activeCategoryKey === "all"
+                ? "All Categories"
+                : (model.labelsByKey[activeCategoryKey] || "Category"),
+            overallTotals: model.totals,
+            showValueLabels: labels.length <= 9,
+            averageValue,
+        };
+
+        setChartHeight(activeRangeKey);
+        chart.data.labels = labels;
+        chart.data.datasets[0].data = series.values;
+        chart.data.datasets[0].backgroundColor = bars;
+        chart.data.datasets[0].borderColor = borderColors;
+        chart.data.datasets[0].maxBarThickness = labels.length <= 10 ? 44 : (labels.length <= 35 ? 20 : 12);
+        chart.data.datasets[0].borderRadius = labels.length <= 10 ? 12 : 8;
+        chart.data.datasets[0].categoryPercentage = labels.length <= 10 ? 0.72 : 0.94;
+        chart.data.datasets[0].barPercentage = labels.length <= 10 ? 0.86 : 0.8;
+        chart.options.scales.x.ticks.maxTicksLimit = activeRangeKey === "7d" ? 7 : (activeRangeKey === "30d" ? 10 : 11);
+        chart.options.plugins.tooltip.displayColors = false;
+        chart.update();
+
+        updateHeaderAndFooter(model, activeCategoryKey, series.values);
+
+        if (trendChipListNode) {
+            trendChipListNode.querySelectorAll("[data-category-key]").forEach((chipButton) => {
+                chipButton.addEventListener("click", () => {
+                    const nextCategoryKey = String(chipButton.dataset.categoryKey || "all");
+                    if (nextCategoryKey === activeCategoryKey) return;
+                    activeCategoryKey = nextCategoryKey;
+                    renderCurrentSelection();
+                });
+            });
+        }
+    };
+
+    rangeButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+            const rangeKey = String(button.getAttribute("data-range-key") || "7d");
+            if (rangeKey === activeRangeKey) return;
+            activeRangeKey = rangeKey;
+            rangeButtons.forEach((node) => node.classList.remove("active"));
+            button.classList.add("active");
+            renderCurrentSelection();
+        });
+    });
+
+    window.addEventListener("resize", () => {
+        setChartHeight(activeRangeKey);
+        chart.resize();
+    });
+
+    renderCurrentSelection();
+}
+</script>
+
+
+</div>
+{% endblock %}
+

@@ -1,0 +1,34 @@
+{
+  "version": 2,
+  "output_dir": "static/mascot/rupy",
+  "states": {
+    "idle": "rupy_idle.png",
+    "hello": "rupy_hello.png",
+    "login": "rupy_login.png",
+    "happy": "rupy_happy.png",
+    "thinking": "rupy_thinking.png",
+    "warning": "rupy_warning.png",
+    "error": "rupy_error.png",
+    "confused": "rupy_confused.png",
+    "celebration": "rupy_celebration.png",
+    "sad": "rupy_sad.png",
+    "angry": "rupy_angry.png",
+    "loading": "rupy_loading.png",
+    "notification": "rupy_notification.png",
+    "lazy-rich": "rupy_lazy_rich.png",
+    "money-rain": "rupy_money_rain.png",
+    "proud": "rupy_proud.png",
+    "wink": "rupy_wink.png",
+    "thumbs-up": "rupy_thumbs_up.png",
+    "broke": "rupy_broke.png",
+    "sunglasses": "rupy_sunglasses.png",
+    "coffee-spend": "rupy_coffee_spend.png",
+    "analyzing-chart": "rupy_analyzing_chart.png",
+    "lightbulb-idea": "rupy_lightbulb_idea.png"
+  },
+  "fx": {
+    "coin": "fx/rupee-coin.png",
+    "coin_glow": "fx/rupee-coin-glow.png",
+    "particle": "fx/rupee-particle.png"
+  }
+}

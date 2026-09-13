@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>ExpensePro Core Expense Tests - JSUnit 2.2</title>
+    <!-- Official bundled JSUnit 2.2 assertion library. -->
+    <script src="../jsunit/app/jsUnitCore.js"></script>
+    <!-- The actual shared dashboard calculation used by ExpensePro. -->
+    <script src="../static/expense-core.js"></script>
+    <script>
+        var dashboardModel = {
+            totals: [120, 80, 50],
+            dailyCategoryByKey: [
+                { food: 70, travel: 50 },
+                { food: 40, bills: 40 },
+                { food: 40, shopping: 10 }
+            ]
+        };
+
+        function testTC01_AllCategoryExpenseTotal() {
+            var actual = ExpenseProCore.getWindowSum(dashboardModel, 0, 3, "all");
+            assertEquals("TC01 Expected: 250 | Actual: " + actual, 250, actual);
+        }
+
+        function testTC02_SpecificFoodCategoryTotal() {
+            var actual = ExpenseProCore.getWindowSum(dashboardModel, 0, 3, "food");
+            assertEquals("TC02 Expected: 150 | Actual: " + actual, 150, actual);
+        }
+
+        function testTC03_AbsentCategoryReturnsZero() {
+            var actual = ExpenseProCore.getWindowSum(dashboardModel, 0, 3, "health");
+            assertEquals("TC03 Expected: 0 | Actual: " + actual, 0, actual);
+        }
+
+        function testTC04_InvalidStartIndexGuard() {
+            var actual = ExpenseProCore.getWindowSum(dashboardModel, -1, 3, "all");
+            assertEquals("TC04 Expected: 0 | Actual: " + actual, 0, actual);
+        }
+    </script>
+</head>
+<body>
+    <h1>ExpensePro Core Expense Tests</h1>
+    <p>Function under test: <code>ExpenseProCore.getWindowSum()</code></p>
+    <table border="1" cellpadding="6" cellspacing="0">
+        <tr><th>Test case</th><th>Path</th><th>Expected</th></tr>
+        <tr><td>TC01</td><td>All-category total branch</td><td>250</td></tr>
+        <tr><td>TC02</td><td>Specific-category loop branch</td><td>150</td></tr>
+        <tr><td>TC03</td><td>Missing-category fallback</td><td>0</td></tr>
+        <tr><td>TC04</td><td>Invalid-index guard condition</td><td>0</td></tr>
+    </table>
+</body>
+</html>

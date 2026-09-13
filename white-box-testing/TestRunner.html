@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ExpensePro Core Expense Tests - JSUnit 2.2</title>
+    <script src="../jsunit/app/jsUnitCore.js"></script>
+    <script src="../static/expense-core.js"></script>
+    <style>
+        body { margin: 0; background: #f4f7fb; color: #1b2638; font: 16px/1.45 Arial, sans-serif; }
+        main { width: min(980px, calc(100% - 32px)); margin: 36px auto; }
+        section { overflow: hidden; background: #fff; border: 1px solid #d8dfeb; border-radius: 12px; box-shadow: 0 5px 18px #14213d12; }
+        header { padding: 23px 28px; color: #fff; background: #173b69; }
+        h1 { margin: 0; font-size: 26px; } header p { margin: 7px 0 0; opacity: .94; }
+        code { padding: 2px 6px; color: #173b69; background: #eaf0f8; border-radius: 4px; }
+        header code { color: #fff; background: #ffffff20; }
+        #summary { padding: 18px 28px; border-bottom: 1px solid #e4e9f1; font-weight: bold; }
+        .pass-text { color: #15733a; }
+        table { width: 100%; border-collapse: collapse; } th, td { padding: 14px 17px; text-align: left; border-bottom: 1px solid #e4e9f1; }
+        th { color: #27415e; background: #f7f9fc; } .status { font-weight: bold; } .pass { color: #15733a; } .fail { color: #b3261e; }
+        footer { padding: 18px 28px; color: #52657a; font-size: 14px; }
+    </style>
+</head>
+<body>
+<main>
+    <section>
+        <header>
+            <h1>ExpensePro - White Box Testing</h1>
+            <p>JSUnit 2.2 | Actual dashboard calculation: <code>ExpenseProCore.getWindowSum()</code></p>
+        </header>
+        <div id="summary">Running JSUnit test cases...</div>
+        <table>
+            <thead><tr><th>Test case</th><th>Path / input</th><th>Expected result</th><th>Actual result</th><th>PASS / FAIL</th></tr></thead>
+            <tbody id="results"></tbody>
+        </table>
+        <footer>Function source: <code>static/expense-core.js</code>. The dashboard imports this same function to calculate expense totals for its selected date window and category.</footer>
+    </section>
+</main>
+<script>
+    /* JSUnit 2.2 assertions. The actual ExpensePro dashboard function is loaded from ../static/expense-core.js. */
+    (function () {
+        var dashboardModel = {
+            totals: [120, 80, 50],
+            dailyCategoryByKey: [
+                { food: 70, travel: 50 },
+                { food: 40, bills: 40 },
+                { food: 40, shopping: 10 }
+            ]
+        };
+        var getWindowSum = window.ExpenseProCore.getWindowSum;
+        var tests = [
+            { id: "TC01", path: "All categories: totals [120, 80, 50]", expected: 250, run: function () { return getWindowSum(dashboardModel, 0, 3, "all"); } },
+            { id: "TC02", path: "Food category over 3 days", expected: 150, run: function () { return getWindowSum(dashboardModel, 0, 3, "food"); } },
+            { id: "TC03", path: "Absent Health category over 3 days", expected: 0, run: function () { return getWindowSum(dashboardModel, 0, 3, "health"); } },
+            { id: "TC04", path: "Invalid start index: -1", expected: 0, run: function () { return getWindowSum(dashboardModel, -1, 3, "all"); } }
+        ];
+        var passed = 0;
+        var results = document.getElementById("results");
+        tests.forEach(function (test) {
+            var actual;
+            var error = "";
+            try {
+                actual = test.run();
+                assertEquals(test.id + " expected " + test.expected + ", actual " + actual, test.expected, actual);
+                passed += 1;
+            } catch (caught) {
+                error = caught && caught.message ? caught.message : String(caught);
+            }
+            results.insertAdjacentHTML("beforeend", "<tr><td>" + test.id + "</td><td>" + test.path + "</td><td>" + test.expected + "</td><td>" + (error || actual) + "</td><td class=\"status " + (error ? "fail\">FAIL" : "pass\">PASS") + "</td></tr>");
+        });
+        var failures = tests.length - passed;
+        document.getElementById("summary").innerHTML = "Runs: " + tests.length + " &nbsp; | &nbsp; <span class=\"" + (failures ? "fail" : "pass-text") + "\">Passed: " + passed + "</span> &nbsp; | &nbsp; Failures: " + failures + " &nbsp; | &nbsp; " + (failures ? "FAILED" : "COMPLETED - ALL TESTS PASSED");
+    }());
+</script>
+</body>
+</html>

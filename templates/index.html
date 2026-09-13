@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Expense Tracker Dashboard</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg', v=favicon_version) }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico', v=favicon_version) }}">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico', v=favicon_version) }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="layout">
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <h2>ExpensePro</h2>
+        <ul>
+            <li class="active">Dashboard</li>
+            <li>Expenses</li>
+            <li>Reports</li>
+            <li>Settings</li>
+        </ul>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main">
+
+        <!-- Header -->
+        <div class="header">
+            <h1>Dashboard</h1>
+            <p>Track and manage your expenses efficiently</p>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="stats">
+            <div class="stat-card">
+                <h4>Total Expense</h4>
+                <p>₹ {{ total|inr }}</p>
+            </div>
+            <div class="stat-card">
+                <h4>Total Records</h4>
+                <p>{{ expenses|length }}</p>
+            </div>
+            <div class="stat-card">
+                <h4>Status</h4>
+                <p>Active</p>
+            </div>
+        </div>
+
+        <!-- Add Expense -->
+        <div class="card">
+            <h3>Add New Expense</h3>
+            <form action="/add" method="POST" class="expense-form">
+                <input type="number" name="amount" placeholder="Amount (₹)" required>
+                <select name="category">
+                    <option>Food</option>
+                    <option>Education</option>
+                    <option>Travel</option>
+                    <option>Shopping</option>
+                    <option>Bills</option>
+                    <option>Health</option>
+                    <option>Other</option>
+                </select>
+                <input type="text" name="description" placeholder="Description">
+                <input type="date" name="date" required>
+                <button type="submit">Add Expense</button>
+            </form>
+        </div>
+
+        <!-- Expense Table -->
+        <div class="card">
+            <h3>Expense History</h3>
+            <table>
+                <tr>
+                    <th>Amount</th>
+                    <th>Category</th>
+                    <th>Description</th>
+                    <th>Date</th>
+                    <th>Time</th>
+                    <th>Action</th>
+                </tr>
+                {% for expense in expenses %}
+                <tr>
+                    <td>₹{{ expense.amount|inr }}</td>
+                    <td>{{ expense.category }}</td>
+                    <td>{{ expense.description }}</td>
+                    <td>{{ expense.date_display if expense.date_display else expense.date }}</td>
+                    <td>{{ expense.time }}</td>
+                    <td>
+                        <form action="/delete/{{ expense._id }}" method="POST" class="inline-form">
+                            <button class="btn-delete" type="submit">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+
+    </div>
+</div>
+
+</body>
+</html>

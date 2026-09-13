@@ -1,0 +1,183 @@
+/* Rupy Modern Mascot Layer */
+.rupy-float-widget.rupy-modern {
+    max-width: min(300px, calc(100vw - 16px));
+    transition: transform 0.2s ease, opacity 0.2s ease;
+    will-change: transform;
+}
+
+.rupy-float-widget.rupy-modern.is-dragging {
+    transition: none !important;
+}
+
+.rupy-float-widget.rupy-modern .rupy-float-avatar {
+    cursor: grab;
+    touch-action: none;
+}
+
+.rupy-float-widget.rupy-modern.is-dragging .rupy-float-avatar {
+    cursor: grabbing;
+}
+
+.rupy-float-widget.rupy-modern .rupy-float-bubble {
+    position: relative;
+    border: 1px solid rgba(191, 219, 254, 0.9);
+    background: linear-gradient(
+            140deg,
+            rgba(255, 255, 255, 0.86),
+            rgba(239, 246, 255, 0.74)
+        );
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 16px;
+    box-shadow:
+        0 16px 34px rgba(15, 23, 42, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.66);
+    color: #102341;
+    font-size: 13px;
+    line-height: 1.38;
+}
+
+.rupy-float-widget.rupy-modern .rupy-float-bubble::after {
+    content: "";
+    position: absolute;
+    right: 22px;
+    bottom: -8px;
+    width: 14px;
+    height: 14px;
+    transform: rotate(45deg);
+    background: rgba(243, 248, 255, 0.88);
+    border-right: 1px solid rgba(191, 219, 254, 0.84);
+    border-bottom: 1px solid rgba(191, 219, 254, 0.84);
+}
+
+.rupy-float-widget.rupy-modern .rupy-float-image {
+    transition:
+        transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1),
+        opacity 200ms ease,
+        filter 220ms ease;
+    will-change: transform, opacity;
+}
+
+.rupy-float-widget.rupy-modern.is-image-transition .rupy-float-image {
+    opacity: 0.3;
+    transform: scale(0.9);
+    filter: blur(0.2px) saturate(0.95);
+}
+
+.rupy-float-widget.rupy-modern .rupy-float-shadow {
+    transition: transform 260ms ease, opacity 260ms ease;
+}
+
+.rupy-float-widget.rupy-modern.state-idle .rupy-float-image,
+.rupy-float-widget.rupy-modern.state-login .rupy-float-image,
+.rupy-float-widget.rupy-modern.state-hello .rupy-float-image,
+.rupy-float-widget.rupy-modern.state-lazy-rich .rupy-float-image,
+.rupy-float-widget.rupy-modern.state-sunglasses .rupy-float-image {
+    animation: rupy-modern-idle-float 3.6s ease-in-out infinite;
+}
+
+.rupy-float-widget.rupy-modern.state-thinking .rupy-float-image,
+.rupy-float-widget.rupy-modern.state-loading .rupy-float-image,
+.rupy-float-widget.rupy-modern.state-analyzing-chart .rupy-float-image {
+    animation: rupy-modern-thinking-bounce 1.45s ease-in-out infinite;
+}
+
+.rupy-float-widget.rupy-modern.state-warning .rupy-float-image,
+.rupy-float-widget.rupy-modern.state-error .rupy-float-image,
+.rupy-float-widget.rupy-modern.state-angry .rupy-float-image,
+.rupy-float-widget.rupy-modern.anim-shake .rupy-float-image {
+    animation: rupy-modern-warning-shake 520ms ease both;
+}
+
+.rupy-float-widget.rupy-modern.state-notification .rupy-float-image,
+.rupy-float-widget.rupy-modern.state-lightbulb-idea .rupy-float-image,
+.rupy-float-widget.rupy-modern.anim-pop .rupy-float-image {
+    animation: rupy-modern-notification-pop 460ms ease both;
+}
+
+.rupy-float-widget.rupy-modern.state-celebration .rupy-float-image,
+.rupy-float-widget.rupy-modern.state-money-rain .rupy-float-image,
+.rupy-float-widget.rupy-modern.anim-jump .rupy-float-image {
+    animation: rupy-modern-celebration-jump 720ms cubic-bezier(0.2, 0.92, 0.2, 1) both;
+}
+
+.rupy-float-widget.rupy-modern.state-happy .rupy-float-image,
+.rupy-float-widget.rupy-modern.state-proud .rupy-float-image,
+.rupy-float-widget.rupy-modern.state-thumbs-up .rupy-float-image,
+.rupy-float-widget.rupy-modern.state-wink .rupy-float-image,
+.rupy-float-widget.rupy-modern.anim-wiggle .rupy-float-image {
+    animation: rupy-modern-happy-wiggle 620ms ease both;
+}
+
+.rupy-float-widget.rupy-modern.anim-bounce .rupy-float-image {
+    animation: rupy-modern-bounce 580ms ease both;
+}
+
+.rupy-float-widget.rupy-modern.state-warning .rupy-float-shadow,
+.rupy-float-widget.rupy-modern.state-error .rupy-float-shadow {
+    transform: translateX(-50%) scale(1.1);
+    opacity: 0.75;
+}
+
+@keyframes rupy-modern-idle-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-7px); }
+}
+
+@keyframes rupy-modern-bounce {
+    0%, 100% { transform: translateY(0) scale(1); }
+    40% { transform: translateY(-10px) scale(1.03); }
+    65% { transform: translateY(0) scale(0.99); }
+}
+
+@keyframes rupy-modern-thinking-bounce {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    35% { transform: translateY(-7px) rotate(-3deg); }
+    70% { transform: translateY(-2px) rotate(2deg); }
+}
+
+@keyframes rupy-modern-warning-shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-4px); }
+    40% { transform: translateX(4px); }
+    60% { transform: translateX(-3px); }
+    80% { transform: translateX(3px); }
+}
+
+@keyframes rupy-modern-notification-pop {
+    0% { transform: scale(0.94) translateY(0); }
+    45% { transform: scale(1.12) translateY(-4px); }
+    100% { transform: scale(1) translateY(0); }
+}
+
+@keyframes rupy-modern-celebration-jump {
+    0% { transform: translateY(0) scale(1); }
+    32% { transform: translateY(-16px) scale(1.08); }
+    56% { transform: translateY(0) scale(0.98); }
+    100% { transform: translateY(0) scale(1); }
+}
+
+@keyframes rupy-modern-happy-wiggle {
+    0%, 100% { transform: rotate(0deg) scale(1); }
+    20% { transform: rotate(-5deg) scale(1.03); }
+    45% { transform: rotate(5deg) scale(1.05); }
+    70% { transform: rotate(-3deg) scale(1.02); }
+}
+
+@media (max-width: 760px) {
+    .rupy-float-widget.rupy-modern {
+        max-width: min(230px, calc(100vw - 10px));
+    }
+
+    .rupy-float-widget.rupy-modern .rupy-float-bubble {
+        font-size: 12px;
+        line-height: 1.32;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .rupy-float-widget.rupy-modern .rupy-float-image {
+        animation: none !important;
+        transition: none !important;
+    }
+}

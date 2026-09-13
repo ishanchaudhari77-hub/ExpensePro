@@ -1,0 +1,353 @@
+{% extends "base.html" %}
+{% block content %}
+<div
+    class="premium-page"
+    data-rupy-context
+    data-rupy-page="expenses"
+    data-forecast-over="{{ monthly_forecast.forecast_over_by }}"
+    data-budget-remaining="{{ month_budget_remaining }}"
+    data-rupy-img-idle="{{ url_for('static', filename='mascot/rupy/rupy_idle.png') }}"
+    data-rupy-img-thinking="{{ url_for('static', filename='mascot/rupy/rupy_thinking.png') }}"
+    data-rupy-img-warning="{{ url_for('static', filename='mascot/rupy/rupy_warning.png') }}"
+    data-rupy-img-error="{{ url_for('static', filename='mascot/rupy/rupy_error.png') }}"
+    data-rupy-img-celebrate="{{ url_for('static', filename='mascot/rupy/rupy_celebration.png') }}"
+                data-rupy-img-confused="{{ url_for('static', filename='mascot/rupy/rupy_confused.png') }}"
+                data-rupy-img-proud="{{ url_for('static', filename='mascot/rupy/rupy_proud.png') }}"
+>
+<div class="header expenses-header premium-header">
+    <h1>Expenses</h1>
+    <p>Manage your expenses and income here</p>
+    <div class="scope-toggle">
+        <a href="{{ url_for('expenses_page', scope='this_month', history_month=history_month) }}" class="scope-btn {{ 'active' if scope == 'this_month' else '' }}">This Month</a>
+        <a href="{{ url_for('expenses_page', scope='all_time', history_month=history_month) }}" class="scope-btn {{ 'active' if scope == 'all_time' else '' }}">All Time</a>
+    </div>
+</div>
+
+<div class="stats">
+    <div class="stat-card stat-expense">
+        <span class="stat-card-icon"><i class="fa-solid fa-wallet"></i></span>
+        <h4>Total Expense</h4>
+        <p>&#8377; {{ total_expense|inr }}</p>
+        {% if scope == 'this_month' %}
+        <small class="stat-help">All-time: &#8377; {{ all_time_expense|inr }}</small>
+        {% else %}
+        <small class="stat-help">This month ({{ current_month }}): &#8377; {{ this_month_expense|inr }}</small>
+        {% endif %}
+    </div>
+    <div class="stat-card stat-income">
+        <span class="stat-card-icon"><i class="fa-solid fa-indian-rupee-sign"></i></span>
+        <h4>Total Income</h4>
+        <p>&#8377; {{ total_income|inr }}</p>
+        {% if scope == 'this_month' %}
+        <small class="stat-help">All-time: &#8377; {{ all_time_income|inr }}</small>
+        {% else %}
+        <small class="stat-help">This month ({{ current_month }}): &#8377; {{ this_month_income|inr }}</small>
+        {% endif %}
+    </div>
+    <div class="stat-card {{ 'stat-negative' if remaining_balance < 0 else 'stat-positive' }}">
+        <span class="stat-card-icon"><i class="fa-solid fa-scale-balanced"></i></span>
+        <h4>Remaining Balance</h4>
+        <p>&#8377; {{ remaining_balance|inr }}</p>
+        {% if scope == 'this_month' %}
+        <small class="stat-help">All-time net: &#8377; {{ all_time_remaining|inr }}</small>
+        {% else %}
+        <small class="stat-help">This month net ({{ current_month }}): &#8377; {{ this_month_remaining|inr }}</small>
+        {% endif %}
+    </div>
+</div>
+
+<section class="smart-insights-grid smart-insights-grid-expenses">
+    <article class="smart-insight-card">
+        <p class="smart-insight-kicker">Forecast Snapshot</p>
+        <h3>Projected spend: &#8377; {{ monthly_forecast.projected_total|inr }}</h3>
+        <p>Budget remaining: <strong>&#8377; {{ month_budget_remaining|inr }}</strong></p>
+        {% if monthly_forecast.forecast_over_by > 0 %}
+        <p class="smart-insight-alert">You may overspend by &#8377; {{ monthly_forecast.forecast_over_by|inr }} at current pace.</p>
+        {% elif month_budget > 0 %}
+        <p class="smart-insight-positive">Current pace is within budget forecast.</p>
+        {% else %}
+        <p class="smart-insight-muted">Set a monthly budget to activate forecast limits.</p>
+        {% endif %}
+    </article>
+
+    <article class="smart-insight-card">
+        <p class="smart-insight-kicker">Category Limit Watch</p>
+        {% if category_budget_status %}
+        <ul class="smart-list">
+            {% for item in category_budget_status[:4] %}
+            <li class="smart-list-item tone-{{ item.tone }}">
+                <span>{{ item.category }}</span>
+                {% if item.limit > 0 %}
+                <strong>{{ item.usage_percent|round(0)|int }}%</strong>
+                {% else %}
+                <strong>No limit</strong>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="smart-insight-muted">No category limits configured yet.</p>
+        {% endif %}
+        <a href="{{ url_for('settings_page') }}" class="smart-inline-link">Update category budgets</a>
+    </article>
+
+    <article class="smart-insight-card">
+        <p class="smart-insight-kicker">What To Cut This Week</p>
+        {% if cut_suggestions %}
+        <ul class="smart-list">
+            {% for item in cut_suggestions %}
+            <li class="smart-list-item">
+                <span>{{ item.category }}</span>
+                <strong>&#8377; {{ item.suggested_cut_week|inr }}</strong>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="smart-insight-positive">No immediate cut needed this week.</p>
+        {% endif %}
+    </article>
+</section>
+
+<div class="card">
+    <h3>Add New Expense</h3>
+    <form action="/add" method="POST" class="expense-form">
+        <input type="number" step="0.01" min="0" name="amount" placeholder="Amount (INR)" required>
+        {% set selected_category = categories[0] if categories else 'Other' %}
+        {% set selected_category_ui = category_ui(selected_category) %}
+        <div
+            class="category-select-wrap"
+            data-category-select
+            data-add-category="true"
+            data-add-form-id="quick-category-form"
+            data-add-input-id="quick-category-name"
+            data-delete-form-id="quick-category-delete-form"
+        >
+            <input type="hidden" name="category" value="{{ selected_category }}" required data-category-input>
+            <button type="button" class="category-select-trigger" data-category-trigger aria-haspopup="listbox" aria-expanded="false">
+                <span class="category-select-icon" data-category-current-icon style="--category-color: {{ selected_category_ui.color }}">
+                    <i class="{{ selected_category_ui.icon }}"></i>
+                </span>
+                <span class="category-select-label" data-category-current-label>{{ selected_category }}</span>
+                <i class="fa-solid fa-chevron-down category-select-caret"></i>
+            </button>
+
+            <div class="category-select-menu" data-category-menu role="listbox" aria-label="Expense categories">
+                {% if categories %}
+                    {% for category in categories %}
+                    {% set category_style = category_ui(category) %}
+                    <button
+                        type="button"
+                        class="category-select-option {{ 'is-selected' if category == selected_category else '' }}"
+                        data-category-option
+                        data-value="{{ category }}"
+                        data-icon="{{ category_style.icon }}"
+                        data-color="{{ category_style.color }}"
+                        aria-selected="{{ 'true' if category == selected_category else 'false' }}"
+                    >
+                        <span class="category-select-icon" style="--category-color: {{ category_style.color }}">
+                            <i class="{{ category_style.icon }}"></i>
+                        </span>
+                        <span class="category-option-label">{{ category }}</span>
+                        {% if category_delete_map.get(category) and category|lower not in ['other', 'general'] %}
+                        <span
+                            class="category-option-delete"
+                            data-category-delete-trigger
+                            data-category-delete-id="{{ category_delete_map.get(category) }}"
+                            data-category-name="{{ category }}"
+                            title="Delete {{ category }}"
+                            aria-label="Delete {{ category }} category"
+                        >
+                            <i class="fa-solid fa-trash-can"></i>
+                        </span>
+                        {% endif %}
+                    </button>
+                    {% endfor %}
+                {% else %}
+                    {% set fallback_category_ui = category_ui('Other') %}
+                    <button
+                        type="button"
+                        class="category-select-option is-selected"
+                        data-category-option
+                        data-value="Other"
+                        data-icon="{{ fallback_category_ui.icon }}"
+                        data-color="{{ fallback_category_ui.color }}"
+                        aria-selected="true"
+                    >
+                        <span class="category-select-icon" style="--category-color: {{ fallback_category_ui.color }}">
+                            <i class="{{ fallback_category_ui.icon }}"></i>
+                        </span>
+                        <span class="category-option-label">Other</span>
+                    </button>
+                {% endif %}
+                <button
+                    type="button"
+                    class="category-select-option add-category-option"
+                    data-category-option
+                    data-value="__add_category__"
+                    data-icon="fa-solid fa-circle-plus"
+                    data-color="#334155"
+                    aria-selected="false"
+                >
+                    <span class="category-select-icon" style="--category-color: #334155">
+                        <i class="fa-solid fa-circle-plus"></i>
+                    </span>
+                    <span class="category-option-label">Add Category</span>
+                </button>
+            </div>
+        </div>
+        <input type="text" name="description" placeholder="Description">
+        <input type="date" name="date" value="{{ today }}" required>
+        <button type="submit">Add Expense</button>
+    </form>
+    <form id="quick-category-form" action="/settings/categories/add" method="POST" style="display:none;">
+        <input type="hidden" name="name" id="quick-category-name">
+    </form>
+    <form
+        id="quick-category-delete-form"
+        action="/settings/categories/delete"
+        method="POST"
+        style="display:none;"
+        data-confirm-form
+        data-confirm-title="Delete Category?"
+        data-confirm-message="Category will be removed and existing expense records move to Other."
+        data-confirm-variant="danger"
+        data-confirm-icon="fa-solid fa-trash-can"
+        data-confirm-cta="Delete Category"
+    ></form>
+</div>
+
+<div class="card">
+    <h3>Add Income</h3>
+    <form action="/add-income" method="POST" class="expense-form">
+        <input type="number" step="0.01" min="0" name="amount" placeholder="Income Amount (INR)" required>
+        <input type="text" name="source" placeholder="Source (Salary, Freelance, etc.)">
+        <input type="date" name="date" value="{{ today }}" required>
+        <div></div>
+        <button type="submit">Add Income</button>
+    </form>
+</div>
+
+<div class="card" id="expense-history-card">
+    <div class="history-header">
+        <h3>Expense History</h3>
+        <form
+            action="{{ url_for('expenses_page') }}"
+            method="GET"
+            class="history-filter-form"
+            data-month-filter
+            data-filter-target="#expense-history-card, #income-history-card"
+        >
+            <input type="hidden" name="scope" value="{{ scope }}">
+            <label for="history-month-filter">Month</label>
+            <select id="history-month-filter" name="history_month">
+                <option value="{{ current_month }}" {% if history_month == current_month %}selected{% endif %}>{{ current_month_label }}</option>
+                <option value="all" {% if history_month == 'all' %}selected{% endif %}>All Months</option>
+                {% for option in history_month_options %}
+                {% if option.value != current_month %}
+                <option value="{{ option.value }}" {% if history_month == option.value %}selected{% endif %}>{{ option.label }}</option>
+                {% endif %}
+                {% endfor %}
+            </select>
+        </form>
+    </div>
+    {% if expense_history_groups %}
+        {% for group in expense_history_groups %}
+        <div class="month-group">
+            <div class="month-group-header">
+                <h4>{{ group.month_label }}</h4>
+                <p>{{ group.count }} record{{ '' if group.count == 1 else 's' }} | Total: &#8377; {{ group.total|inr }}</p>
+            </div>
+            <table>
+                <tr>
+                    <th>Amount</th>
+                    <th class="category-col-header">Category</th>
+                    <th>Description</th>
+                    <th>Date</th>
+                    <th>Time</th>
+                    <th>Action</th>
+                </tr>
+                {% for expense in group.records %}
+                <tr>
+                    <td>&#8377; {{ expense.amount|inr }}</td>
+                    <td class="category-col-cell">
+                        {% set cat_ui = category_ui(expense.category) %}
+                        <span class="category-pill">
+                            <span class="category-badge" style="--category-color: {{ cat_ui.color }}">
+                                <i class="{{ cat_ui.icon }}"></i>
+                            </span>
+                            <span>{{ expense.category }}</span>
+                        </span>
+                    </td>
+                    <td>{{ expense.description }}</td>
+                    <td>{{ expense.date_display }}</td>
+                    <td>{{ expense.history }}</td>
+                    <td>
+                        <a class="btn-edit" href="/edit/{{ expense._id }}">Edit</a>
+                        <form
+                            action="/delete/{{ expense._id }}"
+                            method="POST"
+                            class="inline-form"
+                            data-confirm-form
+                            data-confirm-title="Delete Expense?"
+                            data-confirm-message="This expense entry will be removed permanently."
+                        >
+                            <button class="btn-delete" type="submit">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+        {% endfor %}
+    {% else %}
+    <p class="history-empty">No expense records for the selected month.</p>
+    {% endif %}
+</div>
+
+<div class="card" id="income-history-card">
+    <h3>Income History</h3>
+    {% if income_history_groups %}
+        {% for group in income_history_groups %}
+        <div class="month-group">
+            <div class="month-group-header">
+                <h4>{{ group.month_label }}</h4>
+                <p>{{ group.count }} record{{ '' if group.count == 1 else 's' }} | Total: &#8377; {{ group.total|inr }}</p>
+            </div>
+            <table>
+                <tr>
+                    <th>Amount</th>
+                    <th>Source</th>
+                    <th>Date</th>
+                    <th>Time</th>
+                    <th>Action</th>
+                </tr>
+                {% for income in group.records %}
+                <tr>
+                    <td>&#8377; {{ income.amount|inr }}</td>
+                    <td>{{ income.source }}</td>
+                    <td>{{ income.date_display }}</td>
+                    <td>{{ income.history }}</td>
+                    <td>
+                        <a class="btn-edit" href="/edit-income/{{ income._id }}">Edit</a>
+                        <form
+                            action="/delete-income/{{ income._id }}"
+                            method="POST"
+                            class="inline-form"
+                            data-confirm-form
+                            data-confirm-title="Delete Income?"
+                            data-confirm-message="This income entry will be removed permanently."
+                        >
+                            <button class="btn-delete" type="submit">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+        {% endfor %}
+    {% else %}
+    <p class="history-empty">No income records for the selected month.</p>
+    {% endif %}
+</div>
+</div>
+{% endblock %}

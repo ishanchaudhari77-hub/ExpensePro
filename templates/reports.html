@@ -1,0 +1,433 @@
+{% extends "base.html" %}
+{% block content %}
+<div
+    class="premium-page"
+    data-rupy-context
+    data-rupy-page="reports"
+    data-forecast-over="{{ monthly_forecast.forecast_over_by }}"
+    data-budget-remaining="{{ budget_remaining }}"
+    data-rupy-img-idle="{{ url_for('static', filename='mascot/rupy/rupy_idle.png') }}"
+    data-rupy-img-thinking="{{ url_for('static', filename='mascot/rupy/rupy_thinking.png') }}"
+    data-rupy-img-warning="{{ url_for('static', filename='mascot/rupy/rupy_warning.png') }}"
+    data-rupy-img-error="{{ url_for('static', filename='mascot/rupy/rupy_error.png') }}"
+    data-rupy-img-celebrate="{{ url_for('static', filename='mascot/rupy/rupy_celebration.png') }}"
+                data-rupy-img-confused="{{ url_for('static', filename='mascot/rupy/rupy_confused.png') }}"
+                data-rupy-img-proud="{{ url_for('static', filename='mascot/rupy/rupy_proud.png') }}"
+>
+
+<div class="header reports-header premium-header">
+    <h1>Expense Overview</h1>
+    <p>Monthly spending breakdown for {{ current_month_label }}</p>
+</div>
+
+<div class="card reports-card">
+    <div class="reports-main-grid">
+        <section class="reports-chart-panel">
+            <h3>Monthly Spending Breakdown</h3>
+            {% if category_rows %}
+            <div class="reports-donut-wrap">
+                <canvas id="categoryChart"></canvas>
+            </div>
+            {% else %}
+            <div class="reports-empty-state">
+                <i class="fa-solid fa-chart-pie"></i>
+                <p>No category data available for {{ current_month_label }}.</p>
+            </div>
+            {% endif %}
+        </section>
+
+        <aside class="reports-legend-panel">
+            <h3>Category Split</h3>
+            {% if category_rows %}
+            <div class="reports-legend-list">
+                {% for item in category_rows %}
+                <div class="reports-legend-item" data-legend-index="{{ loop.index0 }}" tabindex="0">
+                    <span class="reports-dot" style="--legend-color: {{ item.color }}">
+                        <i class="{{ category_ui(item.label).icon }}"></i>
+                    </span>
+                    <span class="reports-legend-label">{{ item.label }}</span>
+                    <span class="reports-legend-value">&#8377; {{ item.total|inr }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="reports-empty-copy">Start adding expenses to see category-wise insights.</p>
+            {% endif %}
+        </aside>
+    </div>
+
+    <div class="reports-summary-strip">
+        <div class="reports-summary-block">
+            <span>Total Spent</span>
+            <strong>&#8377; {{ total_expense|inr }}</strong>
+        </div>
+        <div class="reports-summary-divider"></div>
+        <div class="reports-summary-block">
+            <span>Budget Left</span>
+            <strong class="{{ 'negative' if budget_remaining < 0 else 'positive' }}">
+                &#8377; {{ budget_remaining|inr }}
+            </strong>
+        </div>
+    </div>
+    <p class="formula-note" style="margin-top: 14px;">
+        Effective Budget: &#8377; {{ month_budget|inr }} (Base &#8377; {{ monthly_base_budget|inr }} + Carry &#8377; {{ monthly_carry_in|inr }})
+        {% if budget_rollover_enabled %}
+        | Rollover enabled
+        {% endif %}
+    </p>
+
+    <section class="smart-insights-grid smart-insights-grid-reports">
+        <article class="smart-insight-card">
+            <p class="smart-insight-kicker">Forecast View</p>
+            <h3>Projected month-end: &#8377; {{ monthly_forecast.projected_total|inr }}</h3>
+            <p>Run-rate: <strong>&#8377; {{ monthly_forecast.run_rate_daily|inr }}/day</strong></p>
+            {% if monthly_forecast.forecast_over_by > 0 %}
+            <p class="smart-insight-alert">Forecast overspend: &#8377; {{ monthly_forecast.forecast_over_by|inr }}</p>
+            {% else %}
+            <p class="smart-insight-positive">Forecast is within current budget trajectory.</p>
+            {% endif %}
+        </article>
+
+        <article class="smart-insight-card">
+            <p class="smart-insight-kicker">Category Budget Radar</p>
+            {% if category_budget_status %}
+            <ul class="smart-list">
+                {% for item in category_budget_status[:5] %}
+                <li class="smart-list-item tone-{{ item.tone }}">
+                    <span>{{ item.category }}</span>
+                    {% if item.limit > 0 %}
+                    <strong>{{ item.usage_percent|round(0)|int }}%</strong>
+                    {% else %}
+                    <strong>No limit</strong>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="smart-insight-muted">No category limits available for this month.</p>
+            {% endif %}
+        </article>
+
+        <article class="smart-insight-card">
+            <p class="smart-insight-kicker">What To Cut This Week</p>
+            {% if cut_suggestions %}
+            <ul class="smart-list">
+                {% for item in cut_suggestions %}
+                <li class="smart-list-item">
+                    <span>{{ item.category }}</span>
+                    <strong>&#8377; {{ item.suggested_cut_week|inr }}</strong>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="smart-insight-positive">No urgent cut suggestion this week.</p>
+            {% endif %}
+        </article>
+    </section>
+</div>
+
+{% if category_rows %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const reportsLabels = {{ categories|tojson }};
+const reportsValues = {{ totals|tojson }}.map(Number);
+const reportsColors = {{ chart_colors|tojson }};
+const reportsTotal = reportsValues.reduce((sum, value) => sum + value, 0);
+const legendItems = Array.from(document.querySelectorAll("[data-legend-index]"));
+const localeCode = {{ ('hi-IN' if app_language == 'hi' else 'en-IN')|tojson }};
+const inrFormatter = new Intl.NumberFormat(localeCode, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+});
+const inrShortFormatter = new Intl.NumberFormat(localeCode, {
+    maximumFractionDigits: 0
+});
+
+function normalizeLabel(label) {
+    return String(label || "").trim().toLowerCase();
+}
+
+function shortInr(value) {
+    return inrShortFormatter.format(Number(value || 0));
+}
+
+function shadeHexColor(hexColor, percent) {
+    const cleanHex = String(hexColor || "").replace("#", "");
+    if (cleanHex.length !== 6) return hexColor;
+
+    const amount = Math.round(2.55 * percent);
+    const red = Math.min(255, Math.max(0, parseInt(cleanHex.slice(0, 2), 16) + amount));
+    const green = Math.min(255, Math.max(0, parseInt(cleanHex.slice(2, 4), 16) + amount));
+    const blue = Math.min(255, Math.max(0, parseInt(cleanHex.slice(4, 6), 16) + amount));
+
+    const toHex = (value) => value.toString(16).padStart(2, "0");
+    return `#${toHex(red)}${toHex(green)}${toHex(blue)}`;
+}
+
+function getGradientPair(label, fallbackColor) {
+    const key = normalizeLabel(label);
+    const gradientMap = {
+        housing: "#2388E2",
+        rent: "#2388E2",
+        bills: "#1F6FC9",
+        food: "#FF9800",
+        transportation: "#7AC21F",
+        transport: "#7AC21F",
+        travel: "#7AC21F",
+        entertainment: "#9560DB",
+        shopping: "#F35D6C",
+        other: "#7A93AD",
+        "other categories": "#7A93AD",
+        general: "#7A93AD",
+        health: "#7A93AD"
+    };
+
+    const base = gradientMap[key] || fallbackColor;
+    return [base, shadeHexColor(base, -30)];
+}
+
+function buildSegmentGradient(ctx, area, startColor, endColor) {
+    const gradient = ctx.createLinearGradient(area.left, area.top, area.right, area.bottom);
+    gradient.addColorStop(0, startColor);
+    gradient.addColorStop(0.58, shadeHexColor(startColor, -6));
+    gradient.addColorStop(1, endColor);
+    return gradient;
+}
+
+function categoryIconGlyph(label) {
+    const key = normalizeLabel(label);
+    const iconMap = {
+        housing: "\uf015",
+        rent: "\uf015",
+        food: "\uf2e7",
+        transportation: "\uf5e4",
+        transport: "\uf5e4",
+        travel: "\uf5e4",
+        entertainment: "\uf008",
+        shopping: "\uf290",
+        other: "\uf141",
+        general: "\uf141",
+        bills: "\uf543",
+        health: "\uf0f1",
+        education: "\uf19d"
+    };
+    return iconMap[key] || "\uf111";
+}
+
+function drawArcSegment(ctx, x, y, outerRadius, innerRadius, startAngle, endAngle, fillStyle) {
+    ctx.beginPath();
+    ctx.arc(x, y, outerRadius, startAngle, endAngle);
+    ctx.arc(x, y, innerRadius, endAngle, startAngle, true);
+    ctx.closePath();
+    ctx.fillStyle = fillStyle;
+    ctx.fill();
+}
+
+const ringDepthPlugin = {
+    id: "reportsRingDepth",
+    beforeDatasetsDraw(chart) {
+        const meta = chart.getDatasetMeta(0);
+        if (!meta || !meta.data || !meta.data.length) return;
+
+        const depth = 8;
+        const ctx = chart.ctx;
+
+        meta.data.forEach((arc, index) => {
+            const value = Number(reportsValues[index] || 0);
+            if (value <= 0) return;
+
+            const baseColor = reportsColors[index % reportsColors.length] || "#1f6fd5";
+            const [, gradientEnd] = getGradientPair(reportsLabels[index], baseColor);
+            const depthColor = shadeHexColor(gradientEnd, -8);
+
+            ctx.save();
+            ctx.globalAlpha = 0.82;
+            drawArcSegment(
+                ctx,
+                arc.x,
+                arc.y + depth,
+                arc.outerRadius,
+                arc.innerRadius,
+                arc.startAngle,
+                arc.endAngle,
+                depthColor
+            );
+            ctx.restore();
+        });
+    }
+};
+
+const centerTextPlugin = {
+    id: "reportsCenterText",
+    afterDatasetsDraw(chart) {
+        const area = chart.chartArea;
+        if (!area) return;
+
+        const centerX = area.left + area.width / 2;
+        const centerY = area.top + area.height / 2;
+        const valueFontSize = Math.max(22, Math.min(46, Math.floor(area.width * 0.112)));
+        const subFontSize = Math.max(11, Math.min(22, Math.floor(area.width * 0.052)));
+        const monthFontSize = Math.max(10, Math.min(16, Math.floor(area.width * 0.04)));
+        const ctx = chart.ctx;
+        ctx.save();
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+
+        ctx.fillStyle = "#1f2a44";
+        ctx.font = `700 ${valueFontSize}px Segoe UI, sans-serif`;
+        ctx.fillText("\u20b9" + shortInr(reportsTotal), centerX, centerY - 14);
+
+        ctx.fillStyle = "#4b5563";
+        ctx.font = `600 ${subFontSize}px Segoe UI, sans-serif`;
+        ctx.fillText("Total Spent", centerX, centerY + 8);
+
+        ctx.fillStyle = "#64748b";
+        ctx.font = `500 ${monthFontSize}px Segoe UI, sans-serif`;
+        ctx.fillText("{{ current_month_label }}", centerX, centerY + 26);
+        ctx.restore();
+    }
+};
+
+const segmentLabelPlugin = {
+    id: "reportsSegmentLabels",
+    afterDatasetsDraw(chart) {
+        const datasetMeta = chart.getDatasetMeta(0);
+        if (!datasetMeta || !datasetMeta.data || !reportsTotal) return;
+
+        const ctx = chart.ctx;
+        const arcs = datasetMeta.data;
+
+        arcs.forEach((arc, index) => {
+            const value = Number(reportsValues[index] || 0);
+            if (value <= 0) return;
+
+            const angle = arc.endAngle - arc.startAngle;
+            if (angle < 0.38) return;
+
+            const percentage = (value / reportsTotal) * 100;
+            const midAngle = (arc.startAngle + arc.endAngle) / 2;
+            const ringThickness = arc.outerRadius - arc.innerRadius;
+            const radialPosition = arc.innerRadius + ringThickness * 0.60;
+            const x = arc.x + Math.cos(midAngle) * radialPosition;
+            const y = arc.y + Math.sin(midAngle) * radialPosition;
+
+            const iconSize = Math.max(11, Math.min(18, ringThickness * 0.21));
+            const percentSize = Math.max(12, Math.min(20, ringThickness * 0.24));
+            const amountSize = Math.max(10, Math.min(14, ringThickness * 0.16));
+            const labelSize = Math.max(9, Math.min(13, ringThickness * 0.14));
+            const glyph = categoryIconGlyph(reportsLabels[index]);
+
+            ctx.save();
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillStyle = "#ffffff";
+            ctx.shadowColor = "rgba(15, 23, 42, 0.35)";
+            ctx.shadowBlur = 7;
+
+            if (angle >= 0.49) {
+                ctx.font = `900 ${iconSize}px "Font Awesome 6 Free"`;
+                ctx.fillText(glyph, x, y - (percentSize * 0.95));
+            }
+
+            ctx.font = `800 ${percentSize}px Segoe UI, sans-serif`;
+            ctx.fillText(`${Math.round(percentage)}%`, x, y);
+
+            ctx.font = `700 ${amountSize}px Segoe UI, sans-serif`;
+            ctx.fillText(`\u20b9${shortInr(value)}`, x, y + (amountSize * 1.05));
+
+            if (angle > 0.8) {
+                ctx.font = `700 ${labelSize}px Segoe UI, sans-serif`;
+                ctx.fillText(String(reportsLabels[index] || ""), x, y + (amountSize * 2.05));
+            }
+
+            ctx.restore();
+        });
+    }
+};
+
+const ctx = document.getElementById("categoryChart").getContext("2d");
+const reportsChart = new Chart(ctx, {
+    type: "doughnut",
+    data: {
+        labels: reportsLabels,
+        datasets: [
+            {
+                data: reportsValues,
+                backgroundColor(context) {
+                    const color = reportsColors[context.dataIndex % reportsColors.length] || "#1f6fd5";
+                    const area = context.chart.chartArea;
+                    if (!area) return color;
+                    const [gradientStart, gradientEnd] = getGradientPair(reportsLabels[context.dataIndex], color);
+                    return buildSegmentGradient(context.chart.ctx, area, gradientStart, gradientEnd);
+                },
+                borderColor: "#f3f8ff",
+                borderWidth: 4,
+                hoverOffset: 12,
+                spacing: 1
+            }
+        ]
+    },
+    plugins: [ringDepthPlugin, segmentLabelPlugin, centerTextPlugin],
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: "48%",
+        animation: {
+            animateRotate: true,
+            animateScale: true,
+            duration: 950
+        },
+        onHover(event, activeElements) {
+            const activeIndex = activeElements.length ? activeElements[0].index : -1;
+            legendItems.forEach((item) => {
+                const legendIndex = Number(item.getAttribute("data-legend-index"));
+                item.classList.toggle("active", legendIndex === activeIndex);
+            });
+        },
+        plugins: {
+            legend: {
+                display: false
+            },
+            tooltip: {
+                callbacks: {
+                    label(context) {
+                        const label = context.label || "Category";
+                        const value = Number(context.parsed || 0);
+                        const percent = reportsTotal > 0 ? (value / reportsTotal) * 100 : 0;
+                        return `${label}: \u20b9${inrFormatter.format(value)} (${percent.toFixed(1)}%)`;
+                    }
+                }
+            }
+        }
+    }
+});
+
+function highlightLegend(index) {
+    reportsChart.setActiveElements([{ datasetIndex: 0, index }]);
+    reportsChart.update("none");
+    legendItems.forEach((item) => {
+        const legendIndex = Number(item.getAttribute("data-legend-index"));
+        item.classList.toggle("active", legendIndex === index);
+    });
+}
+
+function clearLegendHighlight() {
+    reportsChart.setActiveElements([]);
+    reportsChart.update("none");
+    legendItems.forEach((item) => item.classList.remove("active"));
+}
+
+legendItems.forEach((item) => {
+    const index = Number(item.getAttribute("data-legend-index"));
+    if (!Number.isInteger(index)) return;
+
+    item.addEventListener("mouseenter", () => highlightLegend(index));
+    item.addEventListener("mouseleave", clearLegendHighlight);
+    item.addEventListener("focus", () => highlightLegend(index));
+    item.addEventListener("blur", clearLegendHighlight);
+});
+</script>
+{% endif %}
+
+ </div>
+{% endblock %}

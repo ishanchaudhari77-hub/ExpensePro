@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+{% block content %}
+<div
+    class="premium-page"
+    data-rupy-context
+    data-rupy-page="account"
+    data-forecast-over="0"
+    data-budget-remaining="0"
+    data-rupy-img-idle="{{ url_for('static', filename='mascot/rupy/rupy_idle.png') }}"
+    data-rupy-img-thinking="{{ url_for('static', filename='mascot/rupy/rupy_thinking.png') }}"
+    data-rupy-img-warning="{{ url_for('static', filename='mascot/rupy/rupy_warning.png') }}"
+    data-rupy-img-error="{{ url_for('static', filename='mascot/rupy/rupy_error.png') }}"
+    data-rupy-img-celebrate="{{ url_for('static', filename='mascot/rupy/rupy_celebration.png') }}"
+                data-rupy-img-confused="{{ url_for('static', filename='mascot/rupy/rupy_confused.png') }}"
+                data-rupy-img-proud="{{ url_for('static', filename='mascot/rupy/rupy_proud.png') }}"
+>
+<div class="header account-header premium-header">
+    <h1>{{ t('account.heading') }}</h1>
+    <p>{{ t('account.subtitle') }}</p>
+</div>
+
+<section class="smart-insights-grid smart-insights-grid-account">
+    <article class="smart-insight-card">
+        <p class="smart-insight-kicker">Rupy Security Tip</p>
+        <h3>Keep account credentials protected.</h3>
+        <p>Use a unique password and update it regularly to keep your finance dashboard secure.</p>
+    </article>
+    <article class="smart-insight-card">
+        <p class="smart-insight-kicker">Profile Hygiene</p>
+        <p>Keep your email and profile photo updated so alerts and reports always stay linked to your account.</p>
+    </article>
+</section>
+
+<div class="account-grid">
+    <section class="card account-identity-card">
+        {% set account_avatar_initial = (account_user.name[:1] if account_user and account_user.name else 'P')|upper %}
+        <div
+            class="account-avatar-hero {{ 'has-image' if avatar_image else '' }}"
+            data-account-avatar-preview
+            style="
+                --avatar-start: {{ avatar_ui.start }};
+                --avatar-end: {{ avatar_ui.end }};
+                --avatar-ring: {{ avatar_ui.ring }};
+            "
+        >
+            <img
+                src="{{ url_for('static', filename=avatar_image) if avatar_image else '' }}"
+                alt="{{ account_user.name if account_user else 'Profile' }}"
+                data-account-avatar-image
+                {% if not avatar_image %}hidden{% endif %}
+            >
+            <span data-account-avatar-initial {% if avatar_image %}hidden{% endif %}>{{ account_avatar_initial }}</span>
+        </div>
+        <button
+            type="button"
+            class="account-avatar-quick-btn"
+            data-account-image-trigger
+            data-account-image-target="account-profile-image-input"
+            data-label-upload="{{ t('account.upload_profile_image') }}"
+            data-label-change="{{ t('account.change_profile_image') }}"
+        >
+            <i class="fa-solid fa-camera"></i>
+            <span>{{ t('account.change_profile_image') if avatar_image else t('account.upload_profile_image') }}</span>
+        </button>
+        <button
+            type="button"
+            class="account-avatar-view-btn {% if not avatar_image %}is-disabled{% endif %}"
+            data-account-image-view
+            {% if not avatar_image %}disabled{% endif %}
+        >
+            <i class="fa-regular fa-image"></i>
+            <span>View Profile Photo</span>
+        </button>
+        <div class="account-identity-copy">
+            <h3>{{ account_user.name if account_user else 'Profile' }}</h3>
+            <p title="{{ account_user.email if account_user else '-' }}">{{ account_user.email if account_user else '-' }}</p>
+            <small>{{ t('account.joined', date=(account_user.created_at|pretty_date if account_user and account_user.created_at else '-')) }}</small>
+        </div>
+        <div class="account-identity-badges">
+            <span>{{ t('account.theme_badge', value=t('theme.' ~ appearance_preferences.theme)) }}</span>
+            <span>{{ t('account.language_badge', value=t('language.hindi' if appearance_preferences.language == 'hi' else 'language.english')) }}</span>
+        </div>
+    </section>
+
+    <section class="card account-form-card">
+        <h3>{{ t('account.profile_details') }}</h3>
+        <form
+            action="{{ url_for('account_profile_update') }}"
+            method="POST"
+            class="account-form"
+            enctype="multipart/form-data"
+            data-account-form
+            data-account-image-save-url="{{ url_for('account_profile_image_update') }}"
+        >
+            <label class="account-field">
+                <span>{{ t('account.full_name') }}</span>
+                <input type="text" name="name" value="{{ account_user.name if account_user else '' }}" minlength="2" maxlength="80" required>
+            </label>
+            <label class="account-field">
+                <span>{{ t('account.email_address') }}</span>
+                <input type="email" name="email" value="{{ account_user.email if account_user else '' }}" required>
+            </label>
+            <label class="account-field account-image-upload-field">
+                <span>{{ t('account.profile_image') }}</span>
+                <input
+                    id="account-profile-image-input"
+                    type="file"
+                    name="profile_image"
+                    accept=".png,.jpg,.jpeg,.jfif,.webp,.gif,.avif"
+                    data-account-image-input
+                    data-account-image-max-bytes="{{ profile_image_max_size_bytes }}"
+                >
+                <input type="hidden" name="profile_image_cropped_data" data-account-cropped-data>
+                <p class="account-image-selected-name" data-account-image-filename>{{ t('account.no_file_selected') }}</p>
+                <p class="account-image-status" data-account-image-status hidden></p>
+                <small>{{ t('account.profile_image_hint', max_mb=profile_image_max_size_mb) }} {{ t('account.profile_image_save_hint') }}</small>
+            </label>
+            <label class="account-avatar-remove-toggle {% if not avatar_image %}is-disabled{% endif %}">
+                <input type="checkbox" name="remove_avatar_image" value="1" data-account-image-remove {% if not avatar_image %}disabled{% endif %}>
+                <span>{{ t('account.remove_profile_image') }}</span>
+            </label>
+
+            <fieldset class="account-avatar-fieldset">
+                <legend>{{ t('account.avatar_style') }}</legend>
+                <div class="account-avatar-options">
+                    {% for preset in avatar_presets %}
+                    <label class="account-avatar-option">
+                        <input
+                            type="radio"
+                            name="avatar_preset"
+                            value="{{ preset.key }}"
+                            data-avatar-preset-input
+                            data-avatar-start="{{ preset.start }}"
+                            data-avatar-end="{{ preset.end }}"
+                            data-avatar-ring="{{ preset.ring }}"
+                            {% if avatar_preset == preset.key %}checked{% endif %}
+                        >
+                        <span
+                            class="account-avatar-swatch"
+                            style="
+                                --avatar-start: {{ preset.start }};
+                                --avatar-end: {{ preset.end }};
+                                --avatar-ring: {{ preset.ring }};
+                            "
+                        >
+                            <i class="fa-solid fa-user"></i>
+                        </span>
+                        <span class="account-avatar-label">{{ preset.label }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </fieldset>
+
+            <button type="submit" class="account-save-btn">{{ t('account.save_profile') }}</button>
+        </form>
+    </section>
+</div>
+
+<section class="card account-security-card">
+    <h3>{{ t('account.security') }}</h3>
+    <form action="{{ url_for('account_password_update') }}" method="POST" class="account-form account-password-form">
+        <label class="account-field">
+            <span>{{ t('account.current_password') }}</span>
+            <div class="password-field account-password-field">
+                <input id="account-current-password" type="password" name="current_password" placeholder="{{ t('account.current_password_placeholder') }}" required>
+                <button type="button" class="password-toggle" data-password-toggle data-target="account-current-password" aria-label="Show password">
+                    <i class="fa-regular fa-eye"></i>
+                </button>
+            </div>
+        </label>
+        <label class="account-field">
+            <span>{{ t('account.new_password') }}</span>
+            <div class="password-field account-password-field">
+                <input id="account-new-password" type="password" name="new_password" minlength="6" placeholder="{{ t('account.new_password_placeholder') }}" required>
+                <button type="button" class="password-toggle" data-password-toggle data-target="account-new-password" aria-label="Show password">
+                    <i class="fa-regular fa-eye"></i>
+                </button>
+            </div>
+        </label>
+        <label class="account-field">
+            <span>{{ t('account.confirm_new_password') }}</span>
+            <div class="password-field account-password-field">
+                <input id="account-confirm-password" type="password" name="confirm_password" minlength="6" placeholder="{{ t('account.confirm_new_password_placeholder') }}" required>
+                <button type="button" class="password-toggle" data-password-toggle data-target="account-confirm-password" aria-label="Show password">
+                    <i class="fa-regular fa-eye"></i>
+                </button>
+            </div>
+        </label>
+        <button type="submit" class="account-save-btn account-save-danger">{{ t('account.update_password') }}</button>
+    </form>
+</section>
+
+<div class="account-photo-view-modal" data-account-view-modal aria-hidden="true">
+    <div class="account-photo-view-card" role="dialog" aria-modal="true" aria-labelledby="account-photo-view-title">
+        <div class="account-photo-view-header">
+            <h3 id="account-photo-view-title">Profile Photo</h3>
+            <button type="button" class="account-photo-view-close" data-account-view-close aria-label="Close profile photo preview">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="account-photo-view-stage">
+            <img
+                src="{{ url_for('static', filename=avatar_image) if avatar_image else '' }}"
+                alt="{{ account_user.name if account_user else 'Profile' }}"
+                data-account-view-image
+                {% if not avatar_image %}hidden{% endif %}
+            >
+            <p class="account-photo-view-empty" data-account-view-empty {% if avatar_image %}hidden{% endif %}>No profile photo available.</p>
+        </div>
+    </div>
+</div>
+
+<div class="account-crop-modal" data-account-crop-modal aria-hidden="true">
+    <div class="account-crop-card" role="dialog" aria-modal="true" aria-labelledby="account-crop-title">
+        <div class="account-crop-header">
+            <h3 id="account-crop-title">Crop Profile Photo</h3>
+            <button type="button" class="account-crop-close" data-account-crop-cancel aria-label="Close crop editor">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <p class="account-crop-subtitle">Drag image to adjust position and use zoom slider.</p>
+        <div class="account-crop-stage">
+            <canvas width="420" height="420" data-account-crop-canvas></canvas>
+            <div class="account-crop-grid" aria-hidden="true"></div>
+        </div>
+        <label class="account-crop-zoom-control">
+            <span>Zoom</span>
+            <input type="range" min="100" max="300" step="1" value="100" data-account-crop-zoom>
+        </label>
+        <div class="account-crop-actions">
+            <button type="button" class="account-crop-btn account-crop-btn-secondary" data-account-crop-cancel>Cancel</button>
+            <button type="button" class="account-crop-btn account-crop-btn-primary" data-account-crop-apply>Apply Crop</button>
+        </div>
+    </div>
+</div>
+</div>
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="header">
+    <h1>Edit Expense</h1>
+    <p>Update your expense details</p>
+</div>
+
+<div class="card">
+    <form action="/edit/{{ expense._id }}" method="POST" class="expense-form">
+        <input type="number" step="0.01" min="0" name="amount" value="{{ expense.amount }}" placeholder="Amount (INR)" required>
+        {% set selected_category = expense.category if expense.category else (categories[0] if categories else 'Other') %}
+        {% set selected_category_ui = category_ui(selected_category) %}
+        <div class="category-select-wrap" data-category-select>
+            <input type="hidden" name="category" value="{{ selected_category }}" required data-category-input>
+            <button type="button" class="category-select-trigger" data-category-trigger aria-haspopup="listbox" aria-expanded="false">
+                <span class="category-select-icon" data-category-current-icon style="--category-color: {{ selected_category_ui.color }}">
+                    <i class="{{ selected_category_ui.icon }}"></i>
+                </span>
+                <span class="category-select-label" data-category-current-label>{{ selected_category }}</span>
+                <i class="fa-solid fa-chevron-down category-select-caret"></i>
+            </button>
+            <div class="category-select-menu" data-category-menu role="listbox" aria-label="Expense categories">
+                {% if selected_category not in categories %}
+                <button
+                    type="button"
+                    class="category-select-option is-selected"
+                    data-category-option
+                    data-value="{{ selected_category }}"
+                    data-icon="{{ selected_category_ui.icon }}"
+                    data-color="{{ selected_category_ui.color }}"
+                    aria-selected="true"
+                >
+                    <span class="category-select-icon" style="--category-color: {{ selected_category_ui.color }}">
+                        <i class="{{ selected_category_ui.icon }}"></i>
+                    </span>
+                    <span class="category-option-label">{{ selected_category }}</span>
+                </button>
+                {% endif %}
+                {% for category in categories %}
+                {% set category_style = category_ui(category) %}
+                <button
+                    type="button"
+                    class="category-select-option {{ 'is-selected' if category == selected_category else '' }}"
+                    data-category-option
+                    data-value="{{ category }}"
+                    data-icon="{{ category_style.icon }}"
+                    data-color="{{ category_style.color }}"
+                    aria-selected="{{ 'true' if category == selected_category else 'false' }}"
+                >
+                    <span class="category-select-icon" style="--category-color: {{ category_style.color }}">
+                        <i class="{{ category_style.icon }}"></i>
+                    </span>
+                    <span class="category-option-label">{{ category }}</span>
+                </button>
+                {% endfor %}
+            </div>
+        </div>
+        <input type="text" name="description" value="{{ expense.description }}" placeholder="Description">
+        <input type="date" name="date" value="{{ expense.date }}" required>
+        <button type="submit">Update Expense</button>
+    </form>
+</div>
+{% endblock %}

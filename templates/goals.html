@@ -1,0 +1,270 @@
+{% extends "base.html" %}
+{% block content %}
+<div
+    class="premium-page goals-page"
+    data-rupy-context
+    data-rupy-page="goals"
+    data-forecast-over="{{ goals_overview.overdue_count }}"
+    data-budget-remaining="{{ goals_overview.active_count }}"
+    data-rupy-img-idle="{{ url_for('static', filename='mascot/rupy/rupy_idle.png') }}"
+    data-rupy-img-thinking="{{ url_for('static', filename='mascot/rupy/rupy_thinking.png') }}"
+    data-rupy-img-warning="{{ url_for('static', filename='mascot/rupy/rupy_warning.png') }}"
+    data-rupy-img-error="{{ url_for('static', filename='mascot/rupy/rupy_error.png') }}"
+    data-rupy-img-celebrate="{{ url_for('static', filename='mascot/rupy/rupy_celebration.png') }}"
+    data-rupy-img-confused="{{ url_for('static', filename='mascot/rupy/rupy_confused.png') }}"
+    data-rupy-img-proud="{{ url_for('static', filename='mascot/rupy/rupy_proud.png') }}"
+>
+    <div class="header premium-header goals-header">
+        <div>
+            <h1>Goals</h1>
+            <p>Track savings targets and spending limits from one place.</p>
+        </div>
+        <a href="{{ url_for('dashboard') }}" class="scope-btn active">Back to Dashboard</a>
+    </div>
+
+    <section class="card goals-summary-card">
+        <div class="goals-summary-grid">
+            <article>
+                <p>Active goals</p>
+                <strong>{{ goals_overview.active_count }}</strong>
+            </article>
+            <article>
+                <p>Due soon</p>
+                <strong>{{ goals_overview.due_soon_count }}</strong>
+            </article>
+            <article>
+                <p>Overdue</p>
+                <strong>{{ goals_overview.overdue_count }}</strong>
+            </article>
+            <article>
+                <p>Completed</p>
+                <strong>{{ goals_overview.completed_count }}</strong>
+            </article>
+        </div>
+        {% if goals_overview.next_focus_goal %}
+        <p class="goals-next-focus">
+            Next focus: <strong>{{ goals_overview.next_focus_goal.title }}</strong>
+            ({{ goals_overview.next_focus_goal.due_label }})
+        </p>
+        {% else %}
+        <p class="history-empty">No active goals yet. Create one below to get started.</p>
+        {% endif %}
+    </section>
+
+    <section class="card">
+        <h3>Create New Goal</h3>
+        {% if goal_templates %}
+        <div class="goals-template-strip" data-goal-template-cards>
+            <button type="button" class="goal-template-card is-custom" data-goal-template-card="">
+                <span class="goal-template-card-title">Custom Goal</span>
+                <span class="goal-template-card-meta">Start from scratch</span>
+            </button>
+            {% for template in goal_templates %}
+            <button
+                type="button"
+                class="goal-template-card"
+                data-goal-template-card="{{ template.key }}"
+            >
+                <span class="goal-template-card-title">
+                    {% if template.goal_type == 'spending_cap' %}
+                    <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+                    {% else %}
+                    <i class="fa-solid fa-piggy-bank" aria-hidden="true"></i>
+                    {% endif %}
+                    {{ template.title }}
+                </span>
+                <span class="goal-template-card-meta">
+                    {% if template.goal_type == 'spending_cap' %}
+                    Cap &#8377;{{ template.target_amount|inr }}{% if template.category %} • {{ template.category }}{% endif %}
+                    {% else %}
+                    Save &#8377;{{ template.target_amount|inr }}
+                    {% endif %}
+                </span>
+            </button>
+            {% endfor %}
+        </div>
+        {% endif %}
+        <form
+            action="{{ url_for('add_goal') }}"
+            method="POST"
+            class="expense-form goals-form"
+            data-goal-template-form
+            data-goal-templates='{{ goal_templates|tojson }}'
+        >
+            <select name="template_key" data-goal-template-select>
+                <option value="">Custom (no template)</option>
+                {% for template in goal_templates %}
+                <option value="{{ template.key }}">{{ template.title }}</option>
+                {% endfor %}
+            </select>
+            <input type="text" name="title" placeholder="Goal title" maxlength="90" required>
+            <select name="goal_type" data-goal-type required>
+                <option value="savings">Savings Goal</option>
+                <option value="spending_cap">Spending Cap</option>
+            </select>
+            <input type="number" name="target_amount" data-goal-target step="0.01" min="0.01" placeholder="Target amount (INR)" required>
+            <input type="date" name="due_date" data-goal-due-date min="{{ today }}">
+            <select name="category" data-goal-category>
+                <option value="">All categories</option>
+                {% for category in categories %}
+                <option value="{{ category }}">{{ category }}</option>
+                {% endfor %}
+            </select>
+            <input type="month" name="tracking_month" data-goal-tracking-month value="{{ current_month }}">
+            <label class="goals-recurring-toggle">
+                <input type="checkbox" name="is_recurring" value="1" data-goal-recurring>
+                <span>Recurring monthly reset (for spending cap goals)</span>
+            </label>
+            <button type="submit">Create Goal</button>
+        </form>
+        <p class="history-empty">Use category/month when creating a Spending Cap. Savings goals can ignore those fields.</p>
+    </section>
+
+    <div
+        class="goals-rupy-signal"
+        data-rupy-signal
+        data-goal-warning-count="{{ goal_signal.goal_warning_count }}"
+        data-goal-overdue-count="{{ goal_signal.goal_overdue_count }}"
+        data-goal-completed-today="{{ goal_signal.goal_completed_today }}"
+        data-goal-focus-title="{{ goal_signal.goal_focus_title }}"
+        data-goal-eta="{{ goal_signal.goal_eta }}"
+        data-goal-recurring-resets="{{ goal_signal.goal_recurring_resets }}"
+    ></div>
+
+    <section class="card goals-section-card">
+        <div class="goals-section-head">
+            <h3>Active Goals</h3>
+            <span>{{ goals_overview.active_count }} active</span>
+        </div>
+        {% if goals_overview.active %}
+        <div class="goals-grid">
+            {% for goal in goals_overview.active %}
+            <article class="goal-card {{ 'is-overdue' if goal.is_overdue else '' }} {{ 'is-overlimit' if goal.is_over_limit else '' }}">
+                <div class="goal-card-top">
+                    <p class="goal-type-pill">
+                        <i class="{{ goal.type_icon }}"></i>
+                        <span>{{ goal.type_label }}</span>
+                    </p>
+                    <span class="goal-due-pill {{ 'is-overdue' if goal.is_overdue else ('is-soon' if goal.is_due_soon else '') }}">
+                        {{ goal.due_label }}
+                    </span>
+                </div>
+                <h4>{{ goal.title }}</h4>
+                <p class="goal-detail-copy">{{ goal.detail_copy }}</p>
+                {% if goal.recurrence_label %}
+                <p class="goal-recurring-label">{{ goal.recurrence_label }}</p>
+                {% endif %}
+                <p class="goal-progress-copy">{{ goal.progress_title }}</p>
+                <div class="gamification-mini-track">
+                    <div class="gamification-mini-fill" style="width: {{ goal.progress_percent|round(2) }}%;"></div>
+                </div>
+                <p class="goal-secondary-copy">
+                    {% if goal.goal_type == 'savings' %}
+                    Remaining: <strong>&#8377; {{ goal.remaining_value|inr }}</strong>
+                    {% else %}
+                    {% if goal.remaining_value < 0 %}
+                    Overspent by <strong>&#8377; {{ (goal.remaining_value * -1)|inr }}</strong>
+                    {% else %}
+                    Budget left: <strong>&#8377; {{ goal.remaining_value|inr }}</strong>
+                    {% endif %}
+                    {% endif %}
+                </p>
+                {% if goal.eta_copy %}
+                <p class="goal-eta-copy tone-{{ goal.eta_tone }}">{{ goal.eta_copy }}</p>
+                {% endif %}
+                <div class="goal-card-actions">
+                    <form action="{{ url_for('update_goal_status', goal_id=goal.id) }}" method="POST" class="inline-form">
+                        <input type="hidden" name="action" value="complete">
+                        <button type="submit" class="goal-action-btn">Mark Complete</button>
+                    </form>
+                    <form action="{{ url_for('update_goal_status', goal_id=goal.id) }}" method="POST" class="inline-form">
+                        <input type="hidden" name="action" value="archive">
+                        <button type="submit" class="goal-action-btn is-muted">Archive</button>
+                    </form>
+                    <form
+                        action="{{ url_for('delete_goal', goal_id=goal.id) }}"
+                        method="POST"
+                        class="inline-form"
+                        data-confirm-form
+                        data-confirm-title="Delete Goal?"
+                        data-confirm-message="This goal and its progress snapshot will be removed."
+                        data-confirm-variant="danger"
+                        data-confirm-icon="fa-solid fa-trash-can"
+                        data-confirm-cta="Delete Goal"
+                    >
+                        <button type="submit" class="btn-delete">Delete</button>
+                    </form>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="history-empty">No active goals right now.</p>
+        {% endif %}
+    </section>
+
+    <section class="card goals-section-card">
+        <div class="goals-section-head">
+            <h3>Completed Goals</h3>
+            <span>{{ goals_overview.completed_count }} completed</span>
+        </div>
+        {% if goals_overview.completed %}
+        <div class="goals-grid goals-grid-compact">
+            {% for goal in goals_overview.completed %}
+            <article class="goal-card is-completed">
+                <div class="goal-card-top">
+                    <p class="goal-type-pill">
+                        <i class="{{ goal.type_icon }}"></i>
+                        <span>{{ goal.type_label }}</span>
+                    </p>
+                    <span class="goal-due-pill">Completed {{ goal.completed_at_display }}</span>
+                </div>
+                <h4>{{ goal.title }}</h4>
+                <p class="goal-detail-copy">{{ goal.progress_title }}</p>
+                <div class="goal-card-actions">
+                    <form action="{{ url_for('update_goal_status', goal_id=goal.id) }}" method="POST" class="inline-form">
+                        <input type="hidden" name="action" value="activate">
+                        <button type="submit" class="goal-action-btn is-muted">Move to Active</button>
+                    </form>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="history-empty">No completed goals yet.</p>
+        {% endif %}
+    </section>
+
+    <section class="card goals-section-card">
+        <div class="goals-section-head">
+            <h3>Archived Goals</h3>
+            <span>{{ goals_overview.archived_count }} archived</span>
+        </div>
+        {% if goals_overview.archived %}
+        <div class="goals-grid goals-grid-compact">
+            {% for goal in goals_overview.archived %}
+            <article class="goal-card is-archived">
+                <div class="goal-card-top">
+                    <p class="goal-type-pill">
+                        <i class="{{ goal.type_icon }}"></i>
+                        <span>{{ goal.type_label }}</span>
+                    </p>
+                    <span class="goal-due-pill">Archived</span>
+                </div>
+                <h4>{{ goal.title }}</h4>
+                <p class="goal-detail-copy">{{ goal.progress_title }}</p>
+                <div class="goal-card-actions">
+                    <form action="{{ url_for('update_goal_status', goal_id=goal.id) }}" method="POST" class="inline-form">
+                        <input type="hidden" name="action" value="activate">
+                        <button type="submit" class="goal-action-btn is-muted">Restore</button>
+                    </form>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="history-empty">No archived goals.</p>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

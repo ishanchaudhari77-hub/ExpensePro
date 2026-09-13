@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+{% block content %}
+<div
+    class="premium-page"
+    data-rupy-context
+    data-rupy-page="settings"
+    data-forecast-over="{{ monthly_forecast.forecast_over_by }}"
+    data-budget-remaining="{{ budget_remaining }}"
+    data-rupy-img-idle="{{ url_for('static', filename='mascot/rupy/rupy_idle.png') }}"
+    data-rupy-img-thinking="{{ url_for('static', filename='mascot/rupy/rupy_thinking.png') }}"
+    data-rupy-img-warning="{{ url_for('static', filename='mascot/rupy/rupy_warning.png') }}"
+    data-rupy-img-error="{{ url_for('static', filename='mascot/rupy/rupy_error.png') }}"
+    data-rupy-img-celebrate="{{ url_for('static', filename='mascot/rupy/rupy_celebration.png') }}"
+                data-rupy-img-confused="{{ url_for('static', filename='mascot/rupy/rupy_confused.png') }}"
+                data-rupy-img-proud="{{ url_for('static', filename='mascot/rupy/rupy_proud.png') }}"
+>
+<div class="header premium-header">
+    <h1>Settings</h1>
+    <p>Manage budget rollover, anomaly alerts, and category cleanup</p>
+</div>
+
+<div class="card">
+    <h3>Set Monthly Budget</h3>
+    <form action="/settings/budget" method="POST" class="expense-form settings-budget-form">
+        <input type="month" name="month" value="{{ current_month }}" required>
+        <input type="number" step="0.01" min="0" name="amount" value="{{ month_budget }}" placeholder="Budget amount (INR)" required>
+
+        <div class="settings-category-budget-grid">
+            {% for category in categories %}
+            {% set category_id = category._id|string %}
+            <label class="settings-field settings-category-limit-field">
+                <span>{{ category.name }} limit</span>
+                <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    name="category_limit__{{ category_id }}"
+                    value="{{ category_limit_values.get(category_id) if category_limit_values.get(category_id) else '' }}"
+                    placeholder="Optional"
+                >
+            </label>
+            {% endfor %}
+        </div>
+
+        <label class="settings-toggle">
+            <input type="checkbox" name="rollover_enabled" {% if budget_rollover_enabled %}checked{% endif %}>
+            <span>Enable budget rollover + carry-forward</span>
+        </label>
+        <label class="settings-toggle">
+            <input type="checkbox" name="carry_forward_deficit" {% if carry_forward_deficit %}checked{% endif %}>
+            <span>Carry deficit if overspent (negative carry)</span>
+        </label>
+        <label class="settings-field settings-field-half">
+            <span>Anomaly Threshold (%)</span>
+            <input
+                type="number"
+                name="anomaly_threshold_percent"
+                min="10"
+                max="300"
+                step="1"
+                value="{{ anomaly_threshold_percent|round(0)|int }}"
+                required
+            >
+            <small>Alert when spend crosses this % vs baseline.</small>
+        </label>
+        <label class="settings-field settings-field-half">
+            <span>Anomaly Min Delta (INR)</span>
+            <input
+                type="number"
+                name="anomaly_min_delta"
+                min="0"
+                max="1000000"
+                step="10"
+                value="{{ anomaly_min_delta|round(0)|int }}"
+                required
+            >
+            <small>Ignore tiny jumps below this amount.</small>
+        </label>
+        <label class="settings-field settings-field-full">
+            <span>Baseline Months</span>
+            <input
+                type="number"
+                name="anomaly_baseline_months"
+                min="2"
+                max="12"
+                step="1"
+                value="{{ anomaly_baseline_months }}"
+                required
+            >
+            <small>Compare current month against average of last N months.</small>
+        </label>
+        <button type="submit">Save Budget</button>
+    </form>
+
+    <div class="settings-budget-summary">
+        <p>
+            Base Budget ({{ current_month }}): <strong>&#8377; {{ month_budget|inr }}</strong>
+            | Carry In: <strong>&#8377; {{ carry_in|inr }}</strong>
+            | Effective: <strong>&#8377; {{ effective_budget|inr }}</strong>
+        </p>
+        <p>
+            Spend: <strong>&#8377; {{ monthly_expense|inr }}</strong>
+            | Remaining: <strong class="{{ 'text-negative' if budget_remaining < 0 else 'text-positive' }}">&#8377; {{ budget_remaining|inr }}</strong>
+            | Carry to {{ next_month }}: <strong>&#8377; {{ next_month_carry|inr }}</strong>
+        </p>
+    </div>
+</div>
+
+<section class="smart-insights-grid smart-insights-grid-settings">
+    <article class="smart-insight-card">
+        <p class="smart-insight-kicker">Forecast</p>
+        <h3>Projected spend: &#8377; {{ monthly_forecast.projected_total|inr }}</h3>
+        <p>Run-rate: <strong>&#8377; {{ monthly_forecast.run_rate_daily|inr }}/day</strong></p>
+        {% if monthly_forecast.forecast_over_by > 0 %}
+        <p class="smart-insight-alert">Potential overspend: &#8377; {{ monthly_forecast.forecast_over_by|inr }}</p>
+        {% else %}
+        <p class="smart-insight-positive">Current pace stays within budget forecast.</p>
+        {% endif %}
+    </article>
+
+    <article class="smart-insight-card">
+        <p class="smart-insight-kicker">Category Limit Status</p>
+        {% if category_budget_status %}
+        <ul class="smart-list">
+            {% for item in category_budget_status[:5] %}
+            <li class="smart-list-item tone-{{ item.tone }}">
+                <span>{{ item.category }}</span>
+                {% if item.limit > 0 %}
+                <strong>{{ item.usage_percent|round(0)|int }}%</strong>
+                {% else %}
+                <strong>No limit</strong>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="smart-insight-muted">No category limit data yet.</p>
+        {% endif %}
+    </article>
+
+    <article class="smart-insight-card">
+        <p class="smart-insight-kicker">Weekly Cut Guidance</p>
+        {% if cut_suggestions %}
+        <ul class="smart-list">
+            {% for item in cut_suggestions %}
+            <li class="smart-list-item">
+                <span>{{ item.category }}</span>
+                <strong>&#8377; {{ item.suggested_cut_week|inr }}</strong>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="smart-insight-positive">No urgent category cuts needed.</p>
+        {% endif %}
+    </article>
+</section>
+
+<div class="card">
+    <h3>Carry Forward Preview</h3>
+    <p>
+        Next Month ({{ next_month }}) Base:
+        <strong>&#8377; {{ next_month_base_budget|inr }}</strong>
+        |
+        Expected Effective Budget:
+        <strong>&#8377; {{ next_month_effective_budget|inr }}</strong>
+    </p>
+    <p class="history-empty">
+        Effective = Next Month Base + Carry Forward from current month.
+    </p>
+</div>
+
+<div class="card">
+    <h3>Existing Categories</h3>
+    <p style="margin-bottom: 12px;">If a category is already used, its old expenses are moved to "Other" when deleted.</p>
+    <table>
+        <tr>
+            <th class="category-col-header">Category Name</th>
+            <th>Action</th>
+        </tr>
+        {% for category in categories %}
+        <tr>
+            <td class="category-col-cell">
+                {% set cat_ui = category_ui(category.name) %}
+                <span class="category-pill">
+                    <span class="category-badge" style="--category-color: {{ cat_ui.color }}">
+                        <i class="{{ cat_ui.icon }}"></i>
+                    </span>
+                    <span>{{ category.name }}</span>
+                </span>
+            </td>
+            <td>
+                <form
+                    action="/settings/categories/delete/{{ category._id }}"
+                    method="POST"
+                    class="inline-form"
+                    data-confirm-form
+                    data-confirm-title="Delete Category?"
+                    data-confirm-message="Category will be removed and existing expense records move to Other."
+                >
+                    <button class="btn-delete" type="submit">Delete</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+</div>
+{% endblock %}

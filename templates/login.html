@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="{{ 'hi' if app_language == 'hi' else 'en' }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ t('login.title') }}</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg', v=favicon_version) }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico', v=favicon_version) }}">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico', v=favicon_version) }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='mascot/mascot-animations.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body class="auth-body login-page">
+    <div class="splash-screen" data-splash hidden>
+        <div class="splash-shell">
+            <div class="splash-coin-wrap">
+                <span class="splash-coin">
+                    <i class="fa-solid fa-indian-rupee-sign"></i>
+                </span>
+                <span class="splash-coin-shine"></span>
+            </div>
+            <h1 class="splash-wordmark">
+                <span class="splash-expense">Expense</span><span class="splash-pro">Pro</span>
+            </h1>
+            <p class="splash-tagline">{{ t('splash.tagline') }}</p>
+            <span class="splash-line" aria-hidden="true"></span>
+        </div>
+    </div>
+
+    <main class="login-layout" data-rupy-login>
+        <section class="login-showcase" aria-label="ExpensePro Brand">
+            <a href="{{ url_for('login') }}" class="login-showcase-brand" aria-label="ExpensePro login">
+                <span class="login-brand-coin">
+                    <i class="fa-solid fa-indian-rupee-sign"></i>
+                </span>
+                <span class="login-brand-wordmark">
+                    <span>Expense</span>
+                    <span class="brand-pro">Pro</span>
+                </span>
+            </a>
+            <p class="login-showcase-kicker">Track smarter. Spend wiser. Grow faster.</p>
+
+            <figure
+                class="rupy-stage"
+                data-rupy-mascot
+                data-rupy-has-images="true"
+                data-rupy-img-idle="{{ url_for('static', filename='mascot/rupy/rupy_idle.png') }}"
+                data-rupy-img-thinking="{{ url_for('static', filename='mascot/rupy/rupy_thinking.png') }}"
+                data-rupy-img-warning="{{ url_for('static', filename='mascot/rupy/rupy_warning.png') }}"
+                data-rupy-img-error="{{ url_for('static', filename='mascot/rupy/rupy_error.png') }}"
+                data-rupy-img-celebrate="{{ url_for('static', filename='mascot/rupy/rupy_celebration.png') }}"
+                data-rupy-img-confused="{{ url_for('static', filename='mascot/rupy/rupy_confused.png') }}"
+                data-rupy-img-proud="{{ url_for('static', filename='mascot/rupy/rupy_proud.png') }}"
+            >
+                <div class="rupy-image-shell" aria-hidden="true">
+                    <img
+                        class="rupy-image"
+                        data-rupy-image
+                        src="{{ url_for('static', filename='mascot/rupy/rupy_idle.png') }}"
+                        alt=""
+                        loading="eager"
+                        decoding="async"
+                    >
+                </div>
+                <svg class="rupy-character" viewBox="0 0 320 320" role="img" aria-labelledby="rupy-title rupy-desc">
+                    <title id="rupy-title">Rupy mascot</title>
+                    <desc id="rupy-desc">A living rupee coin character that helps during login.</desc>
+                    <defs>
+                        <radialGradient id="rupy-main-gradient" cx="28%" cy="24%" r="78%">
+                            <stop offset="0%" stop-color="#fef08a"></stop>
+                            <stop offset="40%" stop-color="#facc15"></stop>
+                            <stop offset="100%" stop-color="#ca8a04"></stop>
+                        </radialGradient>
+                        <linearGradient id="rupy-edge-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#fde68a"></stop>
+                            <stop offset="100%" stop-color="#92400e"></stop>
+                        </linearGradient>
+                    </defs>
+
+                    <g class="rupy-shadow-layer">
+                        <ellipse cx="161" cy="279" rx="84" ry="19" class="rupy-shadow"></ellipse>
+                    </g>
+
+                    <g class="rupy-limbs">
+                        <path d="M76 156 C36 150, 36 198, 80 202" class="rupy-arm rupy-arm-left"></path>
+                        <path d="M244 156 C284 148, 294 194, 248 204" class="rupy-arm rupy-arm-right"></path>
+                        <circle cx="74" cy="203" r="15" class="rupy-glove"></circle>
+                        <circle cx="252" cy="205" r="15" class="rupy-glove"></circle>
+                        <path d="M132 246 C126 278, 123 288, 108 294" class="rupy-leg rupy-leg-left"></path>
+                        <path d="M188 246 C193 278, 198 288, 213 294" class="rupy-leg rupy-leg-right"></path>
+                        <ellipse cx="106" cy="298" rx="20" ry="10" class="rupy-shoe"></ellipse>
+                        <ellipse cx="214" cy="298" rx="20" ry="10" class="rupy-shoe"></ellipse>
+                    </g>
+
+                    <g class="rupy-coin-body">
+                        <circle cx="160" cy="154" r="104" class="rupy-coin-edge"></circle>
+                        <circle cx="160" cy="154" r="93" class="rupy-coin-core"></circle>
+                        <circle cx="160" cy="154" r="84" class="rupy-coin-ring"></circle>
+                        <path d="M114 102 C143 84, 193 92, 220 120" class="rupy-shine"></path>
+                        <text x="160" y="172" text-anchor="middle" class="rupy-symbol">₹</text>
+                    </g>
+
+                    <g class="rupy-face">
+                        <path d="M118 123 Q133 111 147 122" class="rupy-brow" data-rupy-brow-left></path>
+                        <path d="M172 122 Q186 111 203 122" class="rupy-brow" data-rupy-brow-right></path>
+                        <ellipse cx="132" cy="138" rx="16" ry="14" class="rupy-eye-orb"></ellipse>
+                        <ellipse cx="190" cy="138" rx="16" ry="14" class="rupy-eye-orb"></ellipse>
+                        <circle cx="132" cy="140" r="6" class="rupy-pupil" data-rupy-pupil></circle>
+                        <circle cx="190" cy="140" r="6" class="rupy-pupil" data-rupy-pupil></circle>
+                        <circle cx="126" cy="136" r="2" class="rupy-eye-highlight"></circle>
+                        <circle cx="184" cy="136" r="2" class="rupy-eye-highlight"></circle>
+                        <path d="M132 177 Q160 198 188 177" class="rupy-mouth" data-rupy-mouth></path>
+                        <circle cx="120" cy="165" r="7" class="rupy-cheek"></circle>
+                        <circle cx="200" cy="165" r="7" class="rupy-cheek"></circle>
+                    </g>
+                </svg>
+                <figcaption class="rupy-caption">
+                    <strong>Rupy</strong>
+                    <span data-rupy-status>Ready to secure your wallet.</span>
+                </figcaption>
+            </figure>
+
+            <ul class="login-showcase-points">
+                <li><i class="fa-solid fa-shield-heart"></i> Secure login session flow</li>
+                <li><i class="fa-solid fa-chart-line"></i> Smart monthly insights</li>
+                <li><i class="fa-solid fa-bolt"></i> Fast and lightweight dashboard</li>
+            </ul>
+        </section>
+
+        <section class="login-panel">
+            <div class="auth-card login-card">
+                <p class="login-mini-label">Expense Tracker System</p>
+                <h1>{{ t('login.heading') }}</h1>
+                <p class="auth-subtitle">{{ t('login.subtitle') }}</p>
+
+                {% if error %}
+                <p class="auth-error">{{ error }}</p>
+                {% endif %}
+
+                <form action="{{ url_for('login') }}" method="POST" class="auth-form login-form" data-login-form>
+                    <input type="hidden" name="next" value="{{ next_url }}">
+
+                    <label class="login-input-group">
+                        <span class="login-input-label">Email</span>
+                        <div class="login-input-wrap">
+                            <i class="fa-regular fa-envelope"></i>
+                            <input
+                                type="email"
+                                name="email"
+                                placeholder="{{ t('login.email_placeholder') }}"
+                                value="{{ form_email }}"
+                                class="{{ 'input-error' if errors and errors.get('email') else '' }}"
+                                data-rupy-track="email"
+                                required
+                            >
+                        </div>
+                    </label>
+                    {% if errors and errors.get('email') %}
+                    <p class="field-error">{{ errors.get('email') }}</p>
+                    {% endif %}
+
+                    <label class="login-input-group">
+                        <span class="login-input-label">Password</span>
+                        <div class="password-field login-input-wrap">
+                            <i class="fa-solid fa-lock"></i>
+                            <input
+                                id="login-password"
+                                type="password"
+                                name="password"
+                                placeholder="{{ t('login.password_placeholder') }}"
+                                class="{{ 'input-error' if errors and errors.get('password') else '' }}"
+                                data-rupy-track="password"
+                                required
+                            >
+                            <button type="button" class="password-toggle" data-password-toggle data-target="login-password" aria-label="Show password">
+                                <i class="fa-regular fa-eye"></i>
+                            </button>
+                        </div>
+                    </label>
+                    {% if errors and errors.get('password') %}
+                    <p class="field-error">{{ errors.get('password') }}</p>
+                    {% endif %}
+
+                    <button type="submit" class="login-submit-btn">
+                        <span>{{ t('login.button') }}</span>
+                        <i class="fa-solid fa-arrow-right-to-bracket"></i>
+                    </button>
+                </form>
+
+                <p class="auth-meta">
+                    {{ t('login.new_user') }}
+                    <a href="{{ url_for('register') }}">{{ t('login.create_account') }}</a>
+                </p>
+            </div>
+        </section>
+    </main>
+    <div
+        class="rupy-float-widget state-login"
+        data-rupy-float
+        data-rupy-asset-base="{{ url_for('static', filename='mascot/rupy/') }}"
+        data-rupy-page="login"
+        data-rupy-img-idle="{{ url_for('static', filename='mascot/rupy/rupy_idle.png') }}"
+        data-rupy-img-hello="{{ url_for('static', filename='mascot/rupy/rupy_hello.png') }}"
+        data-rupy-img-happy="{{ url_for('static', filename='mascot/rupy/rupy_happy.png') }}"
+        data-rupy-img-thinking="{{ url_for('static', filename='mascot/rupy/rupy_thinking.png') }}"
+        data-rupy-img-warning="{{ url_for('static', filename='mascot/rupy/rupy_warning.png') }}"
+        data-rupy-img-confused="{{ url_for('static', filename='mascot/rupy/rupy_confused.png') }}"
+        data-rupy-img-celebration="{{ url_for('static', filename='mascot/rupy/rupy_celebration.png') }}"
+        data-rupy-img-error="{{ url_for('static', filename='mascot/rupy/rupy_error.png') }}"
+        data-rupy-img-celebrate="{{ url_for('static', filename='mascot/rupy/rupy_celebration.png') }}"
+        data-rupy-img-sad="{{ url_for('static', filename='mascot/rupy/rupy_sad.png') }}"
+        data-rupy-img-angry="{{ url_for('static', filename='mascot/rupy/rupy_angry.png') }}"
+        data-rupy-img-loading="{{ url_for('static', filename='mascot/rupy/rupy_loading.png') }}"
+        data-rupy-img-notification="{{ url_for('static', filename='mascot/rupy/rupy_notification.png') }}"
+        data-rupy-img-lazy-rich="{{ url_for('static', filename='mascot/rupy/rupy_lazy_rich.png') }}"
+        data-rupy-img-money-rain="{{ url_for('static', filename='mascot/rupy/rupy_money_rain.png') }}"
+        data-rupy-img-login="{{ url_for('static', filename='mascot/rupy/rupy_login.png') }}"
+        data-rupy-img-proud="{{ url_for('static', filename='mascot/rupy/rupy_proud.png') }}"
+        data-rupy-coin="{{ url_for('static', filename='mascot/rupy/fx/rupee-coin.png') }}"
+        data-rupy-coin-glow="{{ url_for('static', filename='mascot/rupy/fx/rupee-coin-glow.png') }}"
+        data-rupy-particle="{{ url_for('static', filename='mascot/rupy/fx/rupee-particle.png') }}"
+    >
+        <div class="rupy-float-bubble" data-rupy-float-bubble role="status" aria-live="polite">
+            Welcome back. Track every rupee.
+        </div>
+        <button type="button" class="rupy-float-avatar" data-rupy-float-toggle aria-label="Open Rupy assistant">
+            <span class="rupy-float-shadow" aria-hidden="true"></span>
+            <img
+                class="rupy-float-image"
+                data-rupy-float-image
+                src="{{ url_for('static', filename='mascot/rupy/rupy_idle.png') }}"
+                alt="Rupy mascot"
+                loading="eager"
+                decoding="async"
+            >
+        </button>
+        <div class="rupy-float-fx" data-rupy-float-fx aria-hidden="true"></div>
+    </div>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script src="{{ url_for('static', filename='mascot/mascot-states.js') }}"></script>
+    <script src="{{ url_for('static', filename='mascot/mascot-ui.js') }}"></script>
+    <script src="{{ url_for('static', filename='mascot/mascot-engine.js') }}"></script>
+</body>
+</html>

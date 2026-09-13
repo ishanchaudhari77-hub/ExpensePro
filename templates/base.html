@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="{{ 'hi' if app_language == 'hi' else 'en' }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ExpensePro</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg', v=favicon_version) }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico', v=favicon_version) }}">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico', v=favicon_version) }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        (function () {
+            try {
+                const shouldForceSplash = {{ "true" if post_login_splash else "false" }};
+                if (shouldForceSplash) {
+                    sessionStorage.setItem("expensepro-splash-force-v1", "1");
+                }
+                if (sessionStorage.getItem("expensepro-splash-force-v1") === "1") {
+                    document.documentElement.classList.add("pre-splash-login");
+                }
+            } catch (_) {
+                // Ignore storage access issues and continue normal rendering.
+            }
+        })();
+    </script>
+
+    <!-- Main CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='mascot/mascot-animations.css') }}">
+
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body class="theme-{{ app_theme }} lang-{{ app_language }}" data-theme="{{ app_theme }}" data-language="{{ app_language }}" data-endpoint="{{ request.endpoint or '' }}">
+
+<div class="layout">
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+
+        <a href="{{ url_for('dashboard') }}" class="sidebar-brand" aria-label="ExpensePro home">
+            <span class="brand-coin">
+                <i class="fa-solid fa-indian-rupee-sign"></i>
+            </span>
+            <span class="brand-wordmark">
+                <span class="brand-expense">Expense</span><span class="brand-pro">Pro</span>
+            </span>
+        </a>
+
+        <ul>
+            <li {% if request.path=='/account' %}class="active"{% endif %}>
+                <a href="{{ url_for('account_page') }}">
+                    <i class="fa-solid fa-user"></i>
+                    <span>{{ t('sidebar.account') }}</span>
+                </a>
+            </li>
+
+            <li {% if request.path=='/' %}class="active"{% endif %}>
+                <a href="{{ url_for('dashboard') }}">
+                    <i class="fa-solid fa-house"></i>
+                    <span>{{ t('sidebar.dashboard') }}</span>
+                </a>
+            </li>
+
+            <li {% if request.path=='/expenses' %}class="active"{% endif %}>
+                <a href="{{ url_for('expenses_page') }}">
+                    <i class="fa-solid fa-wallet"></i>
+                    <span>{{ t('sidebar.expenses') }}</span>
+                </a>
+            </li>
+
+            <li {% if request.path=='/reports' %}class="active"{% endif %}>
+                <a href="{{ url_for('reports_page') }}">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>{{ t('sidebar.reports') }}</span>
+                </a>
+            </li>
+
+            <li {% if request.path=='/goals' %}class="active"{% endif %}>
+                <a href="{{ url_for('goals_page') }}">
+                    <i class="fa-solid fa-bullseye"></i>
+                    <span>{{ t('sidebar.goals') }}</span>
+                    {% if sidebar_goals_active_count > 0 %}
+                    <span class="sidebar-count-pill {{ 'is-warning' if sidebar_goals_due_soon_count > 0 else '' }}">
+                        {{ sidebar_goals_active_count }}
+                    </span>
+                    {% endif %}
+                </a>
+            </li>
+
+            <li {% if request.path=='/gamification' %}class="active"{% endif %}>
+                <a href="{{ url_for('gamification_page') }}">
+                    <i class="fa-solid fa-trophy"></i>
+                    <span>{{ t('sidebar.gamification') }}</span>
+                </a>
+            </li>
+
+            <li {% if request.path=='/settings' %}class="active"{% endif %}>
+                <a href="{{ url_for('settings_page') }}">
+                    <i class="fa-solid fa-gear"></i>
+                    <span>{{ t('sidebar.settings') }}</span>
+                </a>
+            </li>
+
+            {% if current_user %}
+            <li class="rupy-chat-menu-item" data-rupy-chat-menu-item>
+                <a href="#" data-rupy-chat-open aria-controls="rupy-chat-drawer" aria-expanded="false">
+                    <i class="fa-solid fa-comments-dollar"></i>
+                    <span>Rupy Chat</span>
+                </a>
+            </li>
+
+            <li class="logout-menu-item">
+                <form action="{{ url_for('logout') }}" method="POST" data-logout-form>
+                    <button type="submit" class="logout-btn">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                        <span>{{ t('sidebar.logout') }}</span>
+                    </button>
+                </form>
+            </li>
+            {% endif %}
+        </ul>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main">
+        {% block content %}{% endblock %}
+    </div>
+
+</div>
+
+{% if current_user %}
+<div class="dashboard-drawer-overlay rupy-chat-drawer-overlay" data-rupy-chat-overlay hidden></div>
+
+<aside
+    id="rupy-chat-drawer"
+    class="dashboard-drawer rupy-chat-drawer"
+    data-rupy-chat-drawer
+    aria-hidden="true"
+    aria-label="Rupy Mini Finance Chatbot"
+>
+    <div class="dashboard-drawer-header">
+        <h3>Rupy Chat</h3>
+        <button type="button" class="drawer-close-btn" data-rupy-chat-close aria-label="Close Rupy chat">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
+
+    <section
+        class="card rupy-chat-card rupy-chat-card-drawer"
+        data-rupy-chat
+        data-rupy-chat-default-prompts='{{ [
+            "How much did I spend today?",
+            "Budget left this month?",
+            "Show weekly summary",
+            "How is my streak?"
+        ]|tojson }}'
+    >
+        <div class="rupy-chat-header">
+            <div>
+                <p class="rupy-chat-kicker">Rupy Mini Finance Chatbot</p>
+                <h3>Ask quick money questions</h3>
+            </div>
+            <span class="rupy-chat-badge">Live insights</span>
+        </div>
+
+        <div class="rupy-chat-log" data-rupy-chat-log>
+            <article class="rupy-chat-msg is-rupy">
+                <span class="rupy-chat-author">Rupy</span>
+                <p>Quick snapshot ready. Ask me about spend, budget, weekly summary, or streak.</p>
+            </article>
+        </div>
+
+        <div class="rupy-chat-quick" data-rupy-chat-quick>
+            <button type="button" class="rupy-chat-quick-btn" data-rupy-chat-prompt="How much did I spend today?">
+                Today's spend?
+            </button>
+            <button type="button" class="rupy-chat-quick-btn" data-rupy-chat-prompt="Budget left this month?">
+                Budget left?
+            </button>
+            <button type="button" class="rupy-chat-quick-btn" data-rupy-chat-prompt="Show weekly summary">
+                Weekly summary
+            </button>
+            <button type="button" class="rupy-chat-quick-btn" data-rupy-chat-prompt="How is my streak?">
+                Streak update
+            </button>
+        </div>
+
+        <form class="rupy-chat-form" data-rupy-chat-form>
+            <input
+                type="text"
+                maxlength="280"
+                placeholder="Ask Rupy: How much did I spend today?"
+                aria-label="Ask Rupy"
+                data-rupy-chat-input
+            >
+            <button type="submit" data-rupy-chat-submit>Ask Rupy</button>
+        </form>
+        <p class="rupy-chat-status" data-rupy-chat-status hidden></p>
+    </section>
+</aside>
+{% endif %}
+
+<div class="splash-screen" data-splash hidden>
+    <div class="splash-shell">
+        <div class="splash-coin-wrap">
+            <span class="splash-coin">
+                <i class="fa-solid fa-indian-rupee-sign"></i>
+            </span>
+            <span class="splash-coin-shine"></span>
+        </div>
+        <h1 class="splash-wordmark">
+            <span class="splash-expense">Expense</span><span class="splash-pro">Pro</span>
+        </h1>
+        <p class="splash-tagline">{{ t('splash.tagline') }}</p>
+        <span class="splash-line" aria-hidden="true"></span>
+    </div>
+</div>
+
+{% set flashed_messages = get_flashed_messages(with_categories=true) %}
+<script id="flashed-messages" type="application/json">{{ flashed_messages|tojson }}</script>
+<script id="goal-ui-event" type="application/json">{{ goal_ui_event|tojson }}</script>
+<div class="toast-container" data-toast-container aria-live="polite" aria-atomic="true"></div>
+<div
+    class="rupy-float-widget state-idle"
+    data-rupy-float
+    data-rupy-asset-base="{{ url_for('static', filename='mascot/rupy/') }}"
+    data-rupy-page="{{ request.endpoint or '' }}"
+    data-rupy-budget-left="{{ monthly_remaining|default(0, true) }}"
+    data-rupy-spent-percent="{{ monthly_spent_percent|default(0, true) }}"
+    data-rupy-img-idle="{{ url_for('static', filename='mascot/rupy/rupy_idle.png') }}"
+    data-rupy-img-hello="{{ url_for('static', filename='mascot/rupy/rupy_hello.png') }}"
+    data-rupy-img-login="{{ url_for('static', filename='mascot/rupy/rupy_login.png') }}"
+    data-rupy-img-happy="{{ url_for('static', filename='mascot/rupy/rupy_happy.png') }}"
+    data-rupy-img-thinking="{{ url_for('static', filename='mascot/rupy/rupy_thinking.png') }}"
+    data-rupy-img-warning="{{ url_for('static', filename='mascot/rupy/rupy_warning.png') }}"
+    data-rupy-img-confused="{{ url_for('static', filename='mascot/rupy/rupy_confused.png') }}"
+    data-rupy-img-celebration="{{ url_for('static', filename='mascot/rupy/rupy_celebration.png') }}"
+    data-rupy-img-celebrate="{{ url_for('static', filename='mascot/rupy/rupy_celebration.png') }}"
+    data-rupy-img-sad="{{ url_for('static', filename='mascot/rupy/rupy_sad.png') }}"
+    data-rupy-img-angry="{{ url_for('static', filename='mascot/rupy/rupy_angry.png') }}"
+    data-rupy-img-error="{{ url_for('static', filename='mascot/rupy/rupy_error.png') }}"
+    data-rupy-img-loading="{{ url_for('static', filename='mascot/rupy/rupy_loading.png') }}"
+    data-rupy-img-notification="{{ url_for('static', filename='mascot/rupy/rupy_notification.png') }}"
+    data-rupy-img-lazy-rich="{{ url_for('static', filename='mascot/rupy/rupy_lazy_rich.png') }}"
+    data-rupy-img-money-rain="{{ url_for('static', filename='mascot/rupy/rupy_money_rain.png') }}"
+    data-rupy-img-proud="{{ url_for('static', filename='mascot/rupy/rupy_proud.png') }}"
+    data-rupy-coin="{{ url_for('static', filename='mascot/rupy/fx/rupee-coin.png') }}"
+    data-rupy-coin-glow="{{ url_for('static', filename='mascot/rupy/fx/rupee-coin-glow.png') }}"
+    data-rupy-particle="{{ url_for('static', filename='mascot/rupy/fx/rupee-particle.png') }}"
+>
+    <div class="rupy-float-bubble" data-rupy-float-bubble role="status" aria-live="polite">
+        Welcome back. Track every rupee.
+    </div>
+    <button type="button" class="rupy-float-avatar" data-rupy-float-toggle aria-label="Open Rupy assistant">
+        <span class="rupy-float-shadow" aria-hidden="true"></span>
+        <img
+            class="rupy-float-image"
+            data-rupy-float-image
+            src="{{ url_for('static', filename='mascot/rupy/rupy_idle.png') }}"
+            alt="Rupy mascot"
+            loading="lazy"
+            decoding="async"
+        >
+    </button>
+    <div class="rupy-float-fx" data-rupy-float-fx aria-hidden="true"></div>
+</div>
+
+{% if current_user %}
+<div class="logout-modal" data-logout-modal aria-hidden="true">
+    <div class="logout-modal-card" role="dialog" aria-modal="true" aria-labelledby="logout-modal-title">
+        <h3 id="logout-modal-title">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            {{ t('modal.confirm_logout_title') }}
+        </h3>
+        <p>{{ t('modal.confirm_logout_body') }}</p>
+        <div class="logout-modal-actions">
+            <button type="button" class="logout-modal-no" data-logout-cancel>{{ t('common.cancel') }}</button>
+            <button type="button" class="logout-modal-yes" data-logout-confirm>{{ t('common.logout') }}</button>
+        </div>
+    </div>
+</div>
+
+<div class="action-confirm-modal" data-action-modal aria-hidden="true">
+    <div class="action-confirm-card" role="dialog" aria-modal="true" aria-labelledby="action-confirm-title">
+        <h3 id="action-confirm-title" data-action-title>
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            {{ t('modal.confirm_action_title') }}
+        </h3>
+        <p data-action-message>{{ t('modal.confirm_action_body') }}</p>
+        <div class="action-confirm-actions">
+            <button type="button" class="action-confirm-cancel" data-action-cancel>{{ t('common.cancel') }}</button>
+            <button type="button" class="action-confirm-confirm" data-action-confirm>{{ t('common.yes_continue') }}</button>
+        </div>
+    </div>
+</div>
+
+<div
+    class="delete-success-overlay"
+    data-delete-success-overlay
+    data-animation-path="{{ url_for('static', filename='animations/delete-bin.json') }}"
+    aria-hidden="true"
+>
+    <div class="delete-success-card" role="status" aria-live="polite" aria-atomic="true">
+        <div class="delete-success-lottie" data-delete-success-lottie aria-hidden="true"></div>
+        <p data-delete-success-text>Category removed successfully</p>
+    </div>
+</div>
+{% endif %}
+
+<!-- Sidebar Toggle Script -->
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+<script src="{{ url_for('static', filename='mascot/mascot-states.js') }}"></script>
+<script src="{{ url_for('static', filename='mascot/mascot-ui.js') }}"></script>
+<script src="{{ url_for('static', filename='mascot/mascot-engine.js') }}"></script>
+
+</body>
+</html>
