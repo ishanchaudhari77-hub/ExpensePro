@@ -2,7 +2,7 @@
 
 A simple personal expense management web application.
 
-## Features
+## ✨ Features
 
 - User Registration & Login
 - Expense & Income Tracking
@@ -12,13 +12,17 @@ A simple personal expense management web application.
 - Notifications
 - Rupy Spending Assistant
 
-## Requirements
+---
+
+## ✅ Requirements
 
 - Python 3
 - MongoDB
 - Git (optional)
 
-## Installation
+---
+
+## 🚀 Installation
 
 1. Download or clone the repository.
 
@@ -26,24 +30,35 @@ A simple personal expense management web application.
 
 3. Install required packages:
 
-   pip install Flask pymongo
+```powershell
+pip install -r requirements.txt
+```
 
 4. Make sure MongoDB is running.
 
-## Run
+---
+
+## ▶️ Run
 
 Run:
 
-   python app.py
+```powershell
+python app.py
+```
 
 Then open:
 
-   http://127.0.0.1:5000
+```text
+http://127.0.0.1:5000
+```
 
 Create an account and start using ExpensePro.
 
-## Project Structure
+---
 
+## 📁 Project Structure
+
+```text
 ExpensePro/
 ├── app.py
 ├── templates/
@@ -51,7 +66,10 @@ ExpensePro/
 ├── tests/
 ├── assets/
 └── README.md
+```
 
-## Note
+---
+
+## 📝 Note
 
 This is a Software Engineering Mini Project.
